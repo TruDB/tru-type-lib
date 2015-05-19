@@ -68,7 +68,8 @@ var app = angular.module('tru.type.lib',
         'std.download',
         'std.float',
         'std.usa.dollar',
-        'std.select.value.converter'
+        'std.select.value.converter',
+        'std.filter'
     ]);
 (function () {
     'use strict';
@@ -227,28 +228,30 @@ var app = angular.module('tru.type.lib',
                     template: $templateCache.get('src/templates/edit/std-datetime-span-edit.html'),
                     controller: 'stdDatetimeSpanEditController',
                     link: function (scope, element) {
-                        var fields = element[0].querySelectorAll('input');
+                        var elms = [].slice.call(element[0].querySelectorAll('input'), 0);
 
-                        fields[0].addEventListener('blur', function (event) {
+                        var controllers = elms.map(function (el) {
+                            return angular.element(el).controller('ngModel');
+                        });
+
+                        elms[0].addEventListener('blur', function (event) {
                             var startValue = scope.field.children.start.value.$;
                             var endValue = scope.field.children.end.value.$;
                             if (endValue && endValue instanceof Date && startValue && startValue instanceof Date) {
                                 if (startValue > endValue) {
-                                    $timeout(function () {
-                                        fields[1].value = $filter('date')(startValue, 'MM/dd/yyyy hh:mm a');
-                                    }, 0);
+                                    controllers[1].$setViewValue($filter('date')(startValue, 'MM/dd/yyyy hh:mm a'));
+                                    controllers[1].$render();
                                 }
                             }
                         }, true);
 
-                        fields[1].addEventListener('blur', function (event) {
+                        elms[1].addEventListener('blur', function (event) {
                             var endValue = scope.field.children.end.value.$;
                             var startValue = scope.field.children.start.value.$;
                             if (startValue && startValue instanceof Date && endValue && endValue instanceof Date) {
                                 if (startValue > endValue) {
-                                    $timeout(function () {
-                                        fields[0].value = $filter('date')(endValue, 'MM/dd/yyyy hh:mm a');
-                                    }, 0);
+                                    controllers[0].$setViewValue($filter('date')(endValue, 'MM/dd/yyyy hh:mm a'));
+                                    controllers[0].$render();
                                 }
                             }
                         }, true);
@@ -3918,8 +3921,7 @@ var app = angular.module('tru.type.lib',
                             ngModelCtrl.$setValidity('invalid-date', true);
                             var date = Date.parse(val);
                             if (!isNaN(date)) {
-                                var utc = new Date(val.getUTCFullYear(), val.getUTCMonth(), val.getUTCDate(), val.getUTCHours(), val.getUTCMinutes(), val.getUTCSeconds());
-                                return $filter('date')(utc, 'MM/dd/yyyy hh:mm a');
+                                return $filter('date')(val, 'MM/dd/yyyy hh:mm a');
                             } else {
                                 return 'mm/dd/yyyy hh:mm AM';
                             }
@@ -5961,6 +5963,29 @@ var app = angular.module('tru.type.lib',
 
 (function(){
     'use strict';
+    var module = angular.module('std.filter', []);
+    module.service('stdFilter',
+        [
+            '$filter',
+            function ($filter) {
+                /**
+                 * Returns null for null, a msg (invalid date) for an invalid date object or the
+                 * result of angular's date filter.
+                 * @param {Date} date - Date object.
+                 * @param {string} format - specifies the output format -- see angular's $filter('date').
+                 */
+                this.formatDate = function (date, format) {
+                    if (date === null)
+                        return null;
+                    if (isNaN(date.getTime()))
+                        return '(invalid date)';
+                    return $filter('date')(date, format);
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
 
     var module = angular.module('std.number', []);
 
@@ -6193,15 +6218,15 @@ var app = angular.module('tru.type.lib',
     var module = angular.module('std.formatters');
 
     module.filter('stdDateShort',
-        ['$filter',
-            function ($filter) {
+        ['stdFilter',
+            function (stdFilter) {
                 return function (cfg) {
                     var v = cfg.value.$;
                     if (v === null)
                         return null;
-                    return $filter('date')(v, 'MM/dd/yyyy');
+                    return stdFilter.formatDate(v, 'MM/dd/yyyy');
                 };
-    }])
+            }])
 })();
 (function () {
     'use strict';
@@ -6209,15 +6234,13 @@ var app = angular.module('tru.type.lib',
     var module = angular.module('std.formatters');
 
     module.filter('stdDatetimeShort',
-        ['$filter',
-            function ($filter) {
+        ['stdFilter',
+            function (stdFilter) {
                 return function (cfg) {
                     var v = cfg.value.$;
-                    if (v === null)
-                        return null;
-                    return $filter('date')(v, 'MM/dd/yyyy hh:mm a');
+                    return stdFilter.formatDate(v, 'MM/dd/yyyy hh:mm a');
                 };
-    }])
+            }])
 })();
 (function () {
     'use strict';
@@ -6225,28 +6248,28 @@ var app = angular.module('tru.type.lib',
     var module = angular.module('std.formatters');
 
     module.filter('stdDatetimeSpanShort',
-        ['$filter',
-            function ($filter) {
+        ['stdFilter',
+            function (stdFilter) {
                 return function (cfg) {
                     cfg = cfg.children;
                     var start = cfg.start.value.$;
                     var end = cfg.end.value.$;
                     var text = '';
                     if (start !== null) {
-                        text = $filter('date')(start, 'MM/dd/yyyy hh:mm a') + ' - ';
+                        text = stdFilter.formatDate(start, 'MM/dd/yyyy hh:mm a') + ' - ';
                         if (end != null) {
                             if (start.getYear() === end.getYear() && start.getMonth() === end.getMonth() && start.getDay() === end.getDay())
-                                text += $filter('date')(end, 'hh:mm a');
+                                text += stdFilter.formatDate(end, 'hh:mm a');
                             else
-                                text += $filter('date')(end, 'MM/dd/yyyy hh:mm a');
+                                text += stdFilter.formatDate(end, 'MM/dd/yyyy hh:mm a');
                         }
                     } else {
                         if (end !== null)
-                            text += $filter('date')(end, 'MM/dd/yyyy hh:mm a');
+                            text += stdFilter.formatDate(end, 'MM/dd/yyyy hh:mm a');
                     }
                     return text;
                 };
-    }])
+            }])
 })();
 (function () {
     'use strict';

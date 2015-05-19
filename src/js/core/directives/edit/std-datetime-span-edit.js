@@ -20,28 +20,30 @@
                     template: $templateCache.get('src/templates/edit/std-datetime-span-edit.html'),
                     controller: 'stdDatetimeSpanEditController',
                     link: function (scope, element) {
-                        var fields = element[0].querySelectorAll('input');
+                        var elms = [].slice.call(element[0].querySelectorAll('input'), 0);
 
-                        fields[0].addEventListener('blur', function (event) {
+                        var controllers = elms.map(function (el) {
+                            return angular.element(el).controller('ngModel');
+                        });
+
+                        elms[0].addEventListener('blur', function (event) {
                             var startValue = scope.field.children.start.value.$;
                             var endValue = scope.field.children.end.value.$;
                             if (endValue && endValue instanceof Date && startValue && startValue instanceof Date) {
                                 if (startValue > endValue) {
-                                    $timeout(function () {
-                                        fields[1].value = $filter('date')(startValue, 'MM/dd/yyyy hh:mm a');
-                                    }, 0);
+                                    controllers[1].$setViewValue($filter('date')(startValue, 'MM/dd/yyyy hh:mm a'));
+                                    controllers[1].$render();
                                 }
                             }
                         }, true);
 
-                        fields[1].addEventListener('blur', function (event) {
+                        elms[1].addEventListener('blur', function (event) {
                             var endValue = scope.field.children.end.value.$;
                             var startValue = scope.field.children.start.value.$;
                             if (startValue && startValue instanceof Date && endValue && endValue instanceof Date) {
                                 if (startValue > endValue) {
-                                    $timeout(function () {
-                                        fields[0].value = $filter('date')(endValue, 'MM/dd/yyyy hh:mm a');
-                                    }, 0);
+                                    controllers[0].$setViewValue($filter('date')(endValue, 'MM/dd/yyyy hh:mm a'));
+                                    controllers[0].$render();
                                 }
                             }
                         }, true);

@@ -510,8 +510,7 @@
                             ngModelCtrl.$setValidity('invalid-date', true);
                             var date = Date.parse(val);
                             if (!isNaN(date)) {
-                                var utc = new Date(val.getUTCFullYear(), val.getUTCMonth(), val.getUTCDate(), val.getUTCHours(), val.getUTCMinutes(), val.getUTCSeconds());
-                                return $filter('date')(utc, 'MM/dd/yyyy hh:mm a');
+                                return $filter('date')(val, 'MM/dd/yyyy hh:mm a');
                             } else {
                                 return 'mm/dd/yyyy hh:mm AM';
                             }
