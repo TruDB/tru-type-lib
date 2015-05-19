@@ -1,0 +1,14 @@
+.git/
+.idea/
+.grunt/
+build/
+coverage/
+node_modules/
+stylesheets/
+demo/
+edit.html
+home.html
+index.html
+list.html
+search.html
+
