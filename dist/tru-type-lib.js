@@ -3356,7 +3356,18 @@ var app = angular.module('tru.type.lib',
 
                         element.bind('focus', function(e){
                             $timeout(function() {
-                                setRange(range1Start, range1End, range1, true);
+                                var caretPosition = getCaretPosition();
+                                var sel = window.getSelection();
+                                sel.removeAllRanges();
+
+                                if (range1.indexOf(caretPosition) > -1)
+                                    setRange(range1Start, range1End, range1, true);
+
+                                if (range2.indexOf(caretPosition) > -1)
+                                    setRange(range2Start, range2End, range2, true);
+
+                                if (range3.indexOf(caretPosition) > -1)
+                                    setRange(range3Start, range3End, range3, true);
                             }, 0)
                         });
 
@@ -3906,7 +3917,27 @@ var app = angular.module('tru.type.lib',
 
                         element.bind('focus', function(e){
                             $timeout(function() {
-                                setRange(range1Start, range1End, range1, true);
+                                var caretPosition = getCaretPosition();
+                                var sel = window.getSelection();
+                                sel.removeAllRanges();
+
+                                if (range1.indexOf(caretPosition) > -1)
+                                    setRange(range1Start, range1End, range1, true);
+
+                                if (range2.indexOf(caretPosition) > -1)
+                                    setRange(range2Start, range2End, range2, true);
+
+                                if (range3.indexOf(caretPosition) > -1)
+                                    setRange(range3Start, range3End, range3, true);
+
+                                if (range4.indexOf(caretPosition) > -1)
+                                    setRange(range4Start, range4End, range4, true);
+
+                                if (range5.indexOf(caretPosition) > -1)
+                                    setRange(range5Start, range5End, range5, true);
+
+                                if (range6.indexOf(caretPosition) > -1)
+                                    setRange(range6Start, range6End, range6, true);
                             }, 0)
                         });
 

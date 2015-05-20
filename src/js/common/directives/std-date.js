@@ -339,7 +339,18 @@
 
                         element.bind('focus', function(e){
                             $timeout(function() {
-                                setRange(range1Start, range1End, range1, true);
+                                var caretPosition = getCaretPosition();
+                                var sel = window.getSelection();
+                                sel.removeAllRanges();
+
+                                if (range1.indexOf(caretPosition) > -1)
+                                    setRange(range1Start, range1End, range1, true);
+
+                                if (range2.indexOf(caretPosition) > -1)
+                                    setRange(range2Start, range2End, range2, true);
+
+                                if (range3.indexOf(caretPosition) > -1)
+                                    setRange(range3Start, range3End, range3, true);
                             }, 0)
                         });
 
