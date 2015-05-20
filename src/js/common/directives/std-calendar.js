@@ -186,11 +186,13 @@
                                 $timeout(function() {
                                     ngModelCtrl.$setViewValue(zeroPad(month + 1, 2) + '/' + zeroPad(day, 2) + '/' + zeroPad(year, 4));
                                     ngModelCtrl.$render();
+                                    element[0].focus();
                                 }, 0);
                             } else {
                                 $timeout(function() {
                                     ngModelCtrl.$setViewValue(zeroPad(month + 1, 2) + '/' + zeroPad(day, 2) + '/' + zeroPad(year, 4) + ' ' + dateParts[1] + ' ' + dateParts[2]);
                                     ngModelCtrl.$render();
+                                    element[0].focus();
                                 }, 0);
                             }
                             scope.display = false;
