@@ -15,6 +15,18 @@
                         var isNullable = scope.stdIntegerOnly.type.isNullable;
                         var isEditContext = scope.stdIntegerOnly.isEditContext;
                         var isSearchContext = scope.stdIntegerOnly.isSearchContext;
+                        var maxValue = scope.stdIntegerOnly.type.property.maximumValue;
+                        var minValue = scope.stdIntegerOnly.type.property.minimumValue;
+                        maxValue = typeof maxValue === 'undefined' ? 2147483647 : maxValue;
+                        minValue = typeof minValue === 'undefined' ? -2147483647 : minValue;
+
+                        function setViewValue(cleanVal, inputVal, newVal) {
+                            var start = element[0].selectionStart;
+                            var end = element[0].selectionEnd + cleanVal.length - inputVal.length;
+                            ngModelCtrl.$setViewValue(newVal);
+                            ngModelCtrl.$render();
+                            element[0].setSelectionRange(start, end);
+                        }
 
                         ngModelCtrl.$parsers.push(function (val) {
                             var parts = String(val).split('');
@@ -26,12 +38,18 @@
                                     clean = '-' + clean;
 
                                 if (ngModelCtrl.$viewValue !== clean) {
-                                    var start = element[0].selectionStart;
-                                    var end = element[0].selectionEnd + clean.length - val.length;
-                                    ngModelCtrl.$setViewValue(clean);
-                                    ngModelCtrl.$render();
-                                    element[0].setSelectionRange(start, end);
+                                    setViewValue(clean, val, clean);
                                 }
+                            }
+
+                            if (maxValue && parseInt(clean) > maxValue) {
+                                setViewValue(clean, val, ngModelCtrl.$modelValue);
+                                return ngModelCtrl.$modelValue;
+                            }
+
+                            if (minValue && parseInt(clean) < minValue) {
+                                setViewValue(clean, val, ngModelCtrl.$modelValue);
+                                return ngModelCtrl.$modelValue;
                             }
 
                             //clean === '' because isNaN return false for empty string.

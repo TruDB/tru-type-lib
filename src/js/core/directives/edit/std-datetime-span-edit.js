@@ -49,8 +49,8 @@
                         }
 
                         elms[0].addEventListener('blur', function (event) {
-                            var startValue = scope.field.children.start.value.$;
-                            var endValue = scope.field.children.end.value.$;
+                            var startValue = angular.copy(scope.field.children.start.value.$);
+                            var endValue = angular.copy(scope.field.children.end.value.$);
                             if (endValue && endValue instanceof Date && startValue && startValue instanceof Date) {
                                 var startDate = parseInt(getDateParts(elms[0].value));
                                 var startTime = parseInt(getTimeParts(elms[0].value));
@@ -75,8 +75,8 @@
                         }, true);
 
                         elms[1].addEventListener('blur', function (event) {
-                            var endValue = scope.field.children.end.value.$;
-                            var startValue = scope.field.children.start.value.$;
+                            var endValue = angular.copy(scope.field.children.end.value.$);
+                            var startValue = angular.copy(scope.field.children.start.value.$);
                             if (startValue && startValue instanceof Date && endValue && endValue instanceof Date) {
                                 var startDate = parseInt(getDateParts(elms[0].value));
                                 var startTime = parseInt(getTimeParts(elms[0].value));

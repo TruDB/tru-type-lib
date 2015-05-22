@@ -69,7 +69,8 @@ var app = angular.module('tru.type.lib',
         'std.float',
         'std.usa.dollar',
         'std.select.value.converter',
-        'std.filter'
+        'std.filter',
+        'std.percent'
     ]);
 (function () {
     'use strict';
@@ -257,8 +258,8 @@ var app = angular.module('tru.type.lib',
                         }
 
                         elms[0].addEventListener('blur', function (event) {
-                            var startValue = scope.field.children.start.value.$;
-                            var endValue = scope.field.children.end.value.$;
+                            var startValue = angular.copy(scope.field.children.start.value.$);
+                            var endValue = angular.copy(scope.field.children.end.value.$);
                             if (endValue && endValue instanceof Date && startValue && startValue instanceof Date) {
                                 var startDate = parseInt(getDateParts(elms[0].value));
                                 var startTime = parseInt(getTimeParts(elms[0].value));
@@ -283,8 +284,8 @@ var app = angular.module('tru.type.lib',
                         }, true);
 
                         elms[1].addEventListener('blur', function (event) {
-                            var endValue = scope.field.children.end.value.$;
-                            var startValue = scope.field.children.start.value.$;
+                            var endValue = angular.copy(scope.field.children.end.value.$);
+                            var startValue = angular.copy(scope.field.children.start.value.$);
                             if (startValue && startValue instanceof Date && endValue && endValue instanceof Date) {
                                 var startDate = parseInt(getDateParts(elms[0].value));
                                 var startTime = parseInt(getTimeParts(elms[0].value));
@@ -588,10 +589,15 @@ var app = angular.module('tru.type.lib',
 
             $scope.fileChanged = function (e) {
                 fileReader.read(e.target.files[0], $scope.field.type.property.allowed).then(function (response) {
+                    $scope.noDataMessage = undefined;
                     response.mimeType = response.mimeType ? response.mimeType : 'text/plain';
                     var foundMimeType = self.choices.filter(function (obj) {
                         return obj.label.toLowerCase() === response.mimeType;
                     });
+                    if (foundMimeType.length === 0) {
+                        alert('Unsupported MimeType: ' + response.mimeType);
+                        return;
+                    }
                     $scope.field.children.mimeType.value.$ = foundMimeType[0].value.$;
 
                     $scope.field.children.filename.value.$ = response.filename;
@@ -4076,17 +4082,35 @@ var app = angular.module('tru.type.lib',
                     link: function (scope, element, attrs, ngModelCtrl) {
                         var isNullable = scope.stdDecimal.type.isNullable;
                         var decimalPlaces = scope.stdDecimal.type.property.decimalPlaces;
+                        var maxValue = scope.stdDecimal.type.property.maximumValue;
+                        var minValue = scope.stdDecimal.type.property.minimumValue;
+                        maxValue = typeof maxValue === 'undefined' ? 2147483647 : maxValue;
+                        minValue = typeof minValue === 'undefined' ? -2147483647 : minValue;
 
                         if (typeof decimalPlaces === 'undefined')
                             decimalPlaces = 0;
 
                         var wholePlaces = 38 - decimalPlaces;
 
+                        function setViewValue(cleanVal, inputVal, newVal, offset) {
+                            if (!offset) offset = 0;
+                            var start = element[0].selectionStart;
+                            var end = element[0].selectionEnd + cleanVal.length - inputVal.length + offset;
+                            ngModelCtrl.$setViewValue(newVal);
+                            ngModelCtrl.$render();
+                            element[0].setSelectionRange(start, end);
+                        }
+
                         ngModelCtrl.$formatters.push(function (val) {
                             return val;
                         });
 
                         ngModelCtrl.$parsers.push(function (val) {
+                            if ((val.toString().split('.').length - 1) > 1) {
+                                setViewValue(val, val, ngModelCtrl.$modelValue, -1);
+                                return ngModelCtrl.$modelValue;
+                            }
+
                             var number = Number(val).toPrecision();
 
                             var numericParts = String(val).split('.');
@@ -4117,11 +4141,15 @@ var app = angular.module('tru.type.lib',
                                         clean = '-' + clean;
 
                                     if (ngModelCtrl.$viewValue !== clean) {
-                                        var start = element[0].selectionStart;
-                                        var end = element[0].selectionEnd + clean.length - val.length;
-                                        ngModelCtrl.$setViewValue(clean);
-                                        ngModelCtrl.$render();
-                                        element[0].setSelectionRange(start, end);
+                                        var negativeCount = (val.match(/-/g) || []).length;
+                                        if (negativeCount > 1)
+                                            setViewValue(clean, val, clean);
+                                        else {
+                                            if (wholePlaces === wholeNumber.length || decimalPlaces === fractionalNumber.length)
+                                                setViewValue(clean, val, clean, 1);
+                                            else
+                                                setViewValue(clean, val, clean);
+                                        }
                                     }
                                 }
 
@@ -4139,6 +4167,16 @@ var app = angular.module('tru.type.lib',
                                 else
                                     return undefined;
                             } else {
+                                if (maxValue && number > maxValue) {
+                                    setViewValue(val, val, ngModelCtrl.$modelValue, -1);
+                                    return ngModelCtrl.$modelValue;
+                                }
+
+                                if (minValue && number < minValue) {
+                                    setViewValue(val, val, ngModelCtrl.$modelValue, -1);
+                                    return ngModelCtrl.$modelValue;
+                                }
+
                                 return +number;
                             }
                         });
@@ -4152,9 +4190,9 @@ var app = angular.module('tru.type.lib',
                                 if (numericParts[0] === '-') {
                                     whole = '-0';
                                 } else {
-                                    whole = numericParts[0] === '' ? '0' : numericParts[0].toString().replace(/[^0-9]+/g, '');
+                                    whole = numericParts[0] === '' ? '0' : numericParts[0].toString();
                                 }
-                                fraction = numericParts[1] === '' ? '0' : numericParts[1].toString().replace(/[^0-9]+/g, '');
+                                fraction = numericParts[1] === '' ? '0' : numericParts[1].toString();
                                 element.val(whole + '.' + fraction);
                             } else
                                 element.val(element.val() + '.0');
@@ -4594,6 +4632,18 @@ var app = angular.module('tru.type.lib',
                         var isNullable = scope.stdIntegerOnly.type.isNullable;
                         var isEditContext = scope.stdIntegerOnly.isEditContext;
                         var isSearchContext = scope.stdIntegerOnly.isSearchContext;
+                        var maxValue = scope.stdIntegerOnly.type.property.maximumValue;
+                        var minValue = scope.stdIntegerOnly.type.property.minimumValue;
+                        maxValue = typeof maxValue === 'undefined' ? 2147483647 : maxValue;
+                        minValue = typeof minValue === 'undefined' ? -2147483647 : minValue;
+
+                        function setViewValue(cleanVal, inputVal, newVal) {
+                            var start = element[0].selectionStart;
+                            var end = element[0].selectionEnd + cleanVal.length - inputVal.length;
+                            ngModelCtrl.$setViewValue(newVal);
+                            ngModelCtrl.$render();
+                            element[0].setSelectionRange(start, end);
+                        }
 
                         ngModelCtrl.$parsers.push(function (val) {
                             var parts = String(val).split('');
@@ -4605,12 +4655,18 @@ var app = angular.module('tru.type.lib',
                                     clean = '-' + clean;
 
                                 if (ngModelCtrl.$viewValue !== clean) {
-                                    var start = element[0].selectionStart;
-                                    var end = element[0].selectionEnd + clean.length - val.length;
-                                    ngModelCtrl.$setViewValue(clean);
-                                    ngModelCtrl.$render();
-                                    element[0].setSelectionRange(start, end);
+                                    setViewValue(clean, val, clean);
                                 }
+                            }
+
+                            if (maxValue && parseInt(clean) > maxValue) {
+                                setViewValue(clean, val, ngModelCtrl.$modelValue);
+                                return ngModelCtrl.$modelValue;
+                            }
+
+                            if (minValue && parseInt(clean) < minValue) {
+                                setViewValue(clean, val, ngModelCtrl.$modelValue);
+                                return ngModelCtrl.$modelValue;
                             }
 
                             //clean === '' because isNaN return false for empty string.
@@ -5219,14 +5275,37 @@ var app = angular.module('tru.type.lib',
                     link: function (scope, element, attrs, ngModelCtrl) {
                         var isNullable = scope.stdPercent.type.isNullable;
                         var decimalPlaces = scope.stdPercent.type.property.decimalPlaces;
+                        var maxValue = scope.stdPercent.type.property.maximumValue;
+                        var minValue = scope.stdPercent.type.property.minimumValue;
+                        maxValue = typeof maxValue === 'undefined' ? 2147483647 : maxValue;
+                        minValue = typeof minValue === 'undefined' ? -2147483647 : minValue;
 
                         if (typeof decimalPlaces === 'undefined')
                             decimalPlaces = 2;
 
                         var wholePlaces = 38 - decimalPlaces;
 
+                        function setViewValue(cleanVal, inputVal, newVal, offset) {
+                            if (!offset) offset = 0;
+                            var start = element[0].selectionStart;
+                            var end = element[0].selectionEnd + cleanVal.length - inputVal.length + offset;
+                            ngModelCtrl.$setViewValue(newVal);
+                            ngModelCtrl.$render();
+                            element[0].setSelectionRange(start, end);
+                        }
+
+                        ngModelCtrl.$formatters.push(function (val) {
+                            return (val * 100) + '%';
+                        });
+
                         ngModelCtrl.$parsers.push(function (val) {
                             if (element[0] !== $document[0].activeElement) return ngModelCtrl.$modelValue;
+
+                            if ((val.toString().split('.').length - 1) > 1) {
+                                setViewValue(val, val, ngModelCtrl.$modelValue, -1);
+                                return ngModelCtrl.$modelValue;
+                            }
+
                             var number = Number(val).toPrecision();
 
                             var numericParts = String(val).split('.');
@@ -5257,11 +5336,15 @@ var app = angular.module('tru.type.lib',
                                         clean = '-' + clean;
 
                                     if (ngModelCtrl.$viewValue !== clean) {
-                                        var start = element[0].selectionStart;
-                                        var end = element[0].selectionEnd + clean.length - val.length;
-                                        ngModelCtrl.$setViewValue(clean);
-                                        ngModelCtrl.$render();
-                                        element[0].setSelectionRange(start, end);
+                                        var negativeCount = (val.match(/-/g) || []).length;
+                                        if (negativeCount > 1)
+                                            setViewValue(clean, val, clean);
+                                        else {
+                                            if (wholePlaces === wholeNumber.length || decimalPlaces === fractionalNumber.length)
+                                                setViewValue(clean, val, clean, 1);
+                                            else
+                                                setViewValue(clean, val, clean);
+                                        }
                                     }
                                 }
 
@@ -5279,6 +5362,16 @@ var app = angular.module('tru.type.lib',
                                 else
                                     return undefined;
                             } else {
+                                if (maxValue && number > maxValue) {
+                                    setViewValue(val, val, ngModelCtrl.$modelValue, -1);
+                                    return ngModelCtrl.$modelValue;
+                                }
+
+                                if (minValue && number < minValue) {
+                                    setViewValue(val, val, ngModelCtrl.$modelValue, -1);
+                                    return ngModelCtrl.$modelValue;
+                                }
+
                                 return +number;
                             }
                         });
@@ -5296,7 +5389,7 @@ var app = angular.module('tru.type.lib',
                                 if (numericParts[0] === '-') {
                                     whole = '-0';
                                 } else {
-                                    whole = numericParts[0] === '' ? '0' : numericParts[0].toString().replace(/[^0-9]+/g, '');
+                                    whole = numericParts[0] === '' ? '0' : numericParts[0].toString();
                                 }
                                 fraction = numericParts[1] === '' || numericParts[1] === '0' ? '0%' : numericParts[1].toString().replace(/[^0-9]+/g, '') + '%';
                                 element.val(whole + '.' + fraction);

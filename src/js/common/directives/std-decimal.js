@@ -14,17 +14,35 @@
                     link: function (scope, element, attrs, ngModelCtrl) {
                         var isNullable = scope.stdDecimal.type.isNullable;
                         var decimalPlaces = scope.stdDecimal.type.property.decimalPlaces;
+                        var maxValue = scope.stdDecimal.type.property.maximumValue;
+                        var minValue = scope.stdDecimal.type.property.minimumValue;
+                        maxValue = typeof maxValue === 'undefined' ? 2147483647 : maxValue;
+                        minValue = typeof minValue === 'undefined' ? -2147483647 : minValue;
 
                         if (typeof decimalPlaces === 'undefined')
                             decimalPlaces = 0;
 
                         var wholePlaces = 38 - decimalPlaces;
 
+                        function setViewValue(cleanVal, inputVal, newVal, offset) {
+                            if (!offset) offset = 0;
+                            var start = element[0].selectionStart;
+                            var end = element[0].selectionEnd + cleanVal.length - inputVal.length + offset;
+                            ngModelCtrl.$setViewValue(newVal);
+                            ngModelCtrl.$render();
+                            element[0].setSelectionRange(start, end);
+                        }
+
                         ngModelCtrl.$formatters.push(function (val) {
                             return val;
                         });
 
                         ngModelCtrl.$parsers.push(function (val) {
+                            if ((val.toString().split('.').length - 1) > 1) {
+                                setViewValue(val, val, ngModelCtrl.$modelValue, -1);
+                                return ngModelCtrl.$modelValue;
+                            }
+
                             var number = Number(val).toPrecision();
 
                             var numericParts = String(val).split('.');
@@ -55,11 +73,15 @@
                                         clean = '-' + clean;
 
                                     if (ngModelCtrl.$viewValue !== clean) {
-                                        var start = element[0].selectionStart;
-                                        var end = element[0].selectionEnd + clean.length - val.length;
-                                        ngModelCtrl.$setViewValue(clean);
-                                        ngModelCtrl.$render();
-                                        element[0].setSelectionRange(start, end);
+                                        var negativeCount = (val.match(/-/g) || []).length;
+                                        if (negativeCount > 1)
+                                            setViewValue(clean, val, clean);
+                                        else {
+                                            if (wholePlaces === wholeNumber.length || decimalPlaces === fractionalNumber.length)
+                                                setViewValue(clean, val, clean, 1);
+                                            else
+                                                setViewValue(clean, val, clean);
+                                        }
                                     }
                                 }
 
@@ -77,6 +99,16 @@
                                 else
                                     return undefined;
                             } else {
+                                if (maxValue && number > maxValue) {
+                                    setViewValue(val, val, ngModelCtrl.$modelValue, -1);
+                                    return ngModelCtrl.$modelValue;
+                                }
+
+                                if (minValue && number < minValue) {
+                                    setViewValue(val, val, ngModelCtrl.$modelValue, -1);
+                                    return ngModelCtrl.$modelValue;
+                                }
+
                                 return +number;
                             }
                         });
@@ -90,9 +122,9 @@
                                 if (numericParts[0] === '-') {
                                     whole = '-0';
                                 } else {
-                                    whole = numericParts[0] === '' ? '0' : numericParts[0].toString().replace(/[^0-9]+/g, '');
+                                    whole = numericParts[0] === '' ? '0' : numericParts[0].toString();
                                 }
-                                fraction = numericParts[1] === '' ? '0' : numericParts[1].toString().replace(/[^0-9]+/g, '');
+                                fraction = numericParts[1] === '' ? '0' : numericParts[1].toString();
                                 element.val(whole + '.' + fraction);
                             } else
                                 element.val(element.val() + '.0');

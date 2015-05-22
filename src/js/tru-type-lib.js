@@ -69,5 +69,6 @@ var app = angular.module('tru.type.lib',
         'std.float',
         'std.usa.dollar',
         'std.select.value.converter',
-        'std.filter'
+        'std.filter',
+        'std.percent'
     ]);

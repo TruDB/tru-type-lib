@@ -192,10 +192,15 @@
 
             $scope.fileChanged = function (e) {
                 fileReader.read(e.target.files[0], $scope.field.type.property.allowed).then(function (response) {
+                    $scope.noDataMessage = undefined;
                     response.mimeType = response.mimeType ? response.mimeType : 'text/plain';
                     var foundMimeType = self.choices.filter(function (obj) {
                         return obj.label.toLowerCase() === response.mimeType;
                     });
+                    if (foundMimeType.length === 0) {
+                        alert('Unsupported MimeType: ' + response.mimeType);
+                        return;
+                    }
                     $scope.field.children.mimeType.value.$ = foundMimeType[0].value.$;
 
                     $scope.field.children.filename.value.$ = response.filename;
