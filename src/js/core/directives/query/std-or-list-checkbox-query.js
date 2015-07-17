@@ -91,7 +91,7 @@
                     } else {
                         choice["checked"] = false;
                     }
-                    $scope.data.choices.push(choice);
+                    $scope.data.choices.push(angular.copy(choice));
                 });
 
                 if ($scope.field.type.isNullable) {

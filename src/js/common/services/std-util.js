@@ -105,11 +105,26 @@
                     return retValue;
                 };
 
+                this.isDate = function(date) {
+                    if ( Object.prototype.toString.call(date) === '[object Date]' ) {
+                        if (isNaN(date.getTime())) {
+                            return false;
+                        }
+                        else {
+                            return true;
+                        }
+                    }
+                    else {
+                        return false;
+                    }
+                };
+
                 return {
                     getCursorPosition: this.getCursorPosition,
                     getClosestParentByClass: this.getClosestParentByClass,
                     isUndefined: this.isUndefined,
-                    tryParseInt: this.tryParseInt
+                    tryParseInt: this.tryParseInt,
+                    isDate: this.isDate
                 }
             }
         ]);

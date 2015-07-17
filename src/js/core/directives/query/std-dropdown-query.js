@@ -95,8 +95,8 @@
         }]);
 
     module.directive('stdDropdownQuery',
-        ['$templateCache',
-            function($templateCache) {
+        ['$templateCache', '$timeout',
+            function ($templateCache, $timeout) {
                 return {
                     restrict: 'E',
                     scope: {
@@ -106,7 +106,21 @@
                     require: '^truSearchGroup',
                     template: $templateCache.get('src/templates/query/std-dropdown-query.html'),
                     controller: 'stdDropdownQueryController',
-                    link: function(scope, element, attrs, searchGroupCtrl){
+                    link: function (scope, element, attrs, searchGroupCtrl) {
+                        $timeout(function() {
+                            var select = element[0].querySelectorAll('select')[0];
+
+                            angular.element(select).bind('keydown', function (e) {
+                                if (e.keyCode === 46) {
+                                    if (scope.field.type.isNullable) {
+                                        scope.field.value.$ = 'null';
+                                    } else {
+                                        scope.field.value.$ = undefined;
+                                    }
+                                }
+                            });
+                        });
+
                         scope.searchGroupCtrl = searchGroupCtrl;
                         scope.init();
                     }

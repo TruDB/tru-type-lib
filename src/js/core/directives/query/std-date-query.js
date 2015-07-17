@@ -3,8 +3,8 @@
 
     var module = angular.module('std.date.query', []);
 
-    module.controller('stdDateQueryController', ['$scope', 'stdOperatorLookup',
-        function ($scope, operatorLookup) {
+    module.controller('stdDateQueryController', ['$scope', 'stdOperatorLookup', 'stdUtil',
+        function ($scope, operatorLookup, util) {
             var ctrlValue = $scope.field.property.value;
             var ctrlDefault = $scope.field.property.default;
             var ctrlValueHasValue = typeof ctrlValue !== 'undefined';
@@ -40,7 +40,7 @@
                     var value = $scope.field.value.$;
                     var queryPredicate = $scope.field.queryPredicate;
 
-                    if (value) {
+                    if (value && util.isDate(value)) {
                         var predicates = [];
                         var startValue = new Date(value);
                         var endValue = new Date(value);

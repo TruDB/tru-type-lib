@@ -9,8 +9,8 @@
         }]);
 
     module.directive('stdDateSpanQuery',
-        ['$templateCache',
-            function ($templateCache) {
+        ['$templateCache', 'stdUtil',
+            function ($templateCache, util) {
                 return {
                     restrict: 'E',
                     scope: {
@@ -41,7 +41,7 @@
                                     var start = scope.field.children.start.value.$;
                                     var end = scope.field.children.end.value.$;
 
-                                    if (start && end) {
+                                    if (start && end && util.isDate(start) && util.isDate(end)) {
                                         var startStartValue = new Date(start.toUTCString());
                                         var startEndValue = new Date(end.toUTCString());
 
@@ -63,10 +63,10 @@
                                         } else {
                                             queryPredicate.clear();
                                         }
-                                    } else if (start) {
+                                    } else if (start && util.isDate(start)) {
                                         var startStartValue = new Date(start.toUTCString());
                                         queryPredicate.set('Start', 'ge', startStartValue);
-                                    } else if (end) {
+                                    } else if (end && util.isDate(end)) {
                                         var startEndValue = new Date(end.toUTCString());
                                         queryPredicate.set('Start', 'le', startEndValue);
                                     } else {

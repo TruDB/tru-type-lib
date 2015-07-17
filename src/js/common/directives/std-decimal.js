@@ -2,7 +2,7 @@
     'use strict';
 
     var module = angular.module('std.decimal', []);
- 
+
     module.directive('stdDecimal',
         [
             function () {

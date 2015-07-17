@@ -149,6 +149,22 @@ var app = angular.module('tru.type.lib',
                         return $templateCache.get('src/templates/edit/std-checkbox-edit.html');
                     },
                     link: function (scope, element) {
+                        var oldValue;
+                        var input = element[0].querySelectorAll('input')[0];
+
+                        angular.element(input).bind('focus', function (e) {
+                            oldValue = scope.field.value.$;
+                            if (!scope.field.isListContext)
+                                input.select();
+                        });
+
+                        angular.element(input).bind('keydown', function (e) {
+                            if (e.keyCode === 27) {
+                                scope.field.value.$ = oldValue;
+                                input.blur();
+                            }
+                        });
+
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -389,6 +405,26 @@ var app = angular.module('tru.type.lib',
                     template: $templateCache.get('src/templates/edit/std-dropdown-edit.html'),
                     controller: 'stdDropdownEditController',
                     link: function (scope, element) {
+                        var oldValue;
+                        var select = element[0].querySelectorAll('select')[0];
+
+                        angular.element(select).bind('focus', function (e) {
+                            oldValue = scope.field.value.$;
+                        });
+
+                        angular.element(select).bind('keydown', function (e) {
+                            if (e.keyCode === 27) {
+                                scope.field.value.$ = oldValue;
+                                select.blur();
+                            }
+                            if (e.keyCode === 46) {
+                                if (scope.field.type.isNullable) {
+                                    scope.data.value === -1
+                                    scope.field.value.$ = null;
+                                }
+                            }
+                        });
+
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -745,6 +781,22 @@ var app = angular.module('tru.type.lib',
                     },
                     template: $templateCache.get('src/templates/edit/std-multiline-edit.html'),
                     link: function(scope, element) {
+                        var oldValue;
+                        var input = element[0].querySelectorAll('textarea')[0];
+
+                        angular.element(input).bind('focus', function (e) {
+                            oldValue = scope.field.value.$;
+                            if (!scope.field.isListContext)
+                                input.select();
+                        });
+
+                        angular.element(input).bind('keydown', function (e) {
+                            if (e.keyCode === 27) {
+                                scope.field.value.$ = oldValue;
+                                input.blur();
+                            }
+                        });
+
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -925,6 +977,22 @@ var app = angular.module('tru.type.lib',
                     },
                     template: $templateCache.get('src/templates/edit/std-textbox-edit.html'),
                     link: function(scope, element) {
+                        var oldValue;
+                        var input = element[0].querySelectorAll('input')[0];
+
+                        angular.element(input).bind('focus', function (e) {
+                            oldValue = scope.field.value.$;
+                            if (!scope.field.isListContext)
+                                input.select();
+                        });
+
+                        angular.element(input).bind('keydown', function (e) {
+                            if (e.keyCode === 27) {
+                                scope.field.value.$ = oldValue;
+                                input.blur();
+                            }
+                        });
+
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -1258,8 +1326,8 @@ var app = angular.module('tru.type.lib',
 
     var module = angular.module('std.date.query', []);
 
-    module.controller('stdDateQueryController', ['$scope', 'stdOperatorLookup',
-        function ($scope, operatorLookup) {
+    module.controller('stdDateQueryController', ['$scope', 'stdOperatorLookup', 'stdUtil',
+        function ($scope, operatorLookup, util) {
             var ctrlValue = $scope.field.property.value;
             var ctrlDefault = $scope.field.property.default;
             var ctrlValueHasValue = typeof ctrlValue !== 'undefined';
@@ -1295,7 +1363,7 @@ var app = angular.module('tru.type.lib',
                     var value = $scope.field.value.$;
                     var queryPredicate = $scope.field.queryPredicate;
 
-                    if (value) {
+                    if (value && util.isDate(value)) {
                         var predicates = [];
                         var startValue = new Date(value);
                         var endValue = new Date(value);
@@ -1513,8 +1581,8 @@ var app = angular.module('tru.type.lib',
         }]);
 
     module.directive('stdDateSpanQuery',
-        ['$templateCache',
-            function ($templateCache) {
+        ['$templateCache', 'stdUtil',
+            function ($templateCache, util) {
                 return {
                     restrict: 'E',
                     scope: {
@@ -1545,7 +1613,7 @@ var app = angular.module('tru.type.lib',
                                     var start = scope.field.children.start.value.$;
                                     var end = scope.field.children.end.value.$;
 
-                                    if (start && end) {
+                                    if (start && end && util.isDate(start) && util.isDate(end)) {
                                         var startStartValue = new Date(start.toUTCString());
                                         var startEndValue = new Date(end.toUTCString());
 
@@ -1567,10 +1635,10 @@ var app = angular.module('tru.type.lib',
                                         } else {
                                             queryPredicate.clear();
                                         }
-                                    } else if (start) {
+                                    } else if (start && util.isDate(start)) {
                                         var startStartValue = new Date(start.toUTCString());
                                         queryPredicate.set('Start', 'ge', startStartValue);
-                                    } else if (end) {
+                                    } else if (end && util.isDate(end)) {
                                         var startEndValue = new Date(end.toUTCString());
                                         queryPredicate.set('Start', 'le', startEndValue);
                                     } else {
@@ -1970,8 +2038,8 @@ var app = angular.module('tru.type.lib',
         }]);
 
     module.directive('stdDropdownQuery',
-        ['$templateCache',
-            function($templateCache) {
+        ['$templateCache', '$timeout',
+            function ($templateCache, $timeout) {
                 return {
                     restrict: 'E',
                     scope: {
@@ -1981,7 +2049,21 @@ var app = angular.module('tru.type.lib',
                     require: '^truSearchGroup',
                     template: $templateCache.get('src/templates/query/std-dropdown-query.html'),
                     controller: 'stdDropdownQueryController',
-                    link: function(scope, element, attrs, searchGroupCtrl){
+                    link: function (scope, element, attrs, searchGroupCtrl) {
+                        $timeout(function() {
+                            var select = element[0].querySelectorAll('select')[0];
+
+                            angular.element(select).bind('keydown', function (e) {
+                                if (e.keyCode === 46) {
+                                    if (scope.field.type.isNullable) {
+                                        scope.field.value.$ = 'null';
+                                    } else {
+                                        scope.field.value.$ = undefined;
+                                    }
+                                }
+                            });
+                        });
+
                         scope.searchGroupCtrl = searchGroupCtrl;
                         scope.init();
                     }
@@ -2357,7 +2439,7 @@ var app = angular.module('tru.type.lib',
                     } else {
                         choice["checked"] = false;
                     }
-                    $scope.data.choices.push(choice);
+                    $scope.data.choices.push(angular.copy(choice));
                 });
 
                 if ($scope.field.type.isNullable) {
@@ -2681,8 +2763,8 @@ var app = angular.module('tru.type.lib',
         }]);
 
     module.directive('stdTextboxQuery',
-        ['$templateCache',
-            function($templateCache) {
+        ['$templateCache', '$timeout',
+            function ($templateCache, $timeout) {
                 return {
                     restrict: 'E',
                     scope: {
@@ -3486,11 +3568,13 @@ var app = angular.module('tru.type.lib',
     var module = angular.module('std.datetime', []);
 
     module.directive('stdDatetime',
-        ['$filter', '$timeout',
-            function ($filter, $timeout) {
+        ['$filter', '$timeout', '$parse',
+            function ($filter, $timeout, $parse) {
                 return {
                     require: 'ngModel',
                     link: function (scope, element, attrs, ngModelCtrl) {
+                        //TODO: Would like to pass field in as an isolated scope variable. Cannot do this currently due to the calendar directive already asking for isolation.
+                        var isNullable = $parse(attrs.isNullable)(scope);
                         var format = 'MM/dd/yyyy hh:mm a';
                         var timeZone = 0;
                         var formatParts = format.split(/[\s/:]+/);
@@ -3529,6 +3613,9 @@ var app = angular.module('tru.type.lib',
 
                         var selectedRange = [];
                         var rangeInitialized = false;
+                        var externalEvent = false;
+                        var focusedValue;
+                        ngModelCtrl.rangeInitialized = rangeInitialized;
                         var militaryTime = false; //scope.stdTime.property.militaryTime;
 
                         var mouseDown = new Date().getTime(),
@@ -3584,7 +3671,7 @@ var app = angular.module('tru.type.lib',
                         }
 
                         function getCharFromKeyCode(e) {
-                            if(e.keyCode >= 96 && e.keyCode <= 105)
+                            if (e.keyCode >= 96 && e.keyCode <= 105)
                                 return parseInt(String.fromCharCode(e.keyCode - 48));
 
                             return parseInt(String.fromCharCode(e.keyCode));
@@ -3594,7 +3681,18 @@ var app = angular.module('tru.type.lib',
                             return !isNaN(parseFloat(n)) && isFinite(n);
                         }
 
-                        element.bind('keydown', function(e) {
+                        element.bind('keydown', function (e) {
+                            if (!focusedValue)
+                                focusedValue = scope.field.value.$;
+
+                            if (e.keyCode === 27) {
+                                ngModelCtrl.$setValidity('invalid-date', true);
+                                ngModelCtrl.$setViewValue($filter('date')(new Date(focusedValue), 'MM/dd/yyyy hh:mm a'));
+                                ngModelCtrl.$render();
+                                e.preventDefault();
+                                return;
+                            }
+
                             if (e.keyCode === 37) {
                                 if (selectedRange === range6) {
                                     setRange(range5Start, range5End, range5, true);
@@ -3673,50 +3771,55 @@ var app = angular.module('tru.type.lib',
                             }
 
                             if (e.keyCode === 46) {
-                                var selectedText = getSelectedText();
-                                if (selectedRange === range1 && !isNaN(selectedText)) {
-                                    setValue(position1Format);
-                                    setRange(range1Start, range1End, range1, true);
-                                }
-                                else if (selectedRange === range1 && isNaN(selectedText)) {
-                                    setRange(range2Start, range2End, range2);
-                                    setValue(position2Format);
-                                    setRange(range2Start, range2End, range2, true);
-                                }
-                                else if (selectedRange === range2 && !isNaN(selectedText)) {
-                                    setValue(position2Format);
-                                    setRange(range2Start, range2End, range2, true);
-                                }
-                                else if (selectedRange === range2 && isNaN(selectedText)) {
-                                    setRange(range3Start, range3End, range3, true);
-                                    setValue(position3Format);
-                                    setRange(range3Start, range3End, range3, true);
-                                }
-                                else if (selectedRange === range3 && !isNaN(selectedText)) {
-                                    setValue(position3Format);
-                                    setRange(range3Start, range3End, range3, true);
-                                }
-                                else if (selectedRange === range3 && isNaN(selectedText)) {
-                                    setRange(range4Start, range4End, range4, true);
-                                    setValue(position4Format);
-                                    setRange(range4Start, range4End, range4, true);
-                                }
-                                else if (selectedRange === range4 && !isNaN(selectedText)) {
-                                    setValue(position4Format);
-                                    setRange(range4Start, range4End, range4, true);
-                                }
-                                else if (selectedRange === range4 && isNaN(selectedText)) {
-                                    setRange(range5Start, range5End, range5, true);
-                                    setValue(position5Format);
-                                    setRange(range5Start, range5End, range5, true);
-                                }
-                                else if (selectedRange === range5 && !isNaN(selectedText)) {
-                                    setValue(position5Format);
-                                    setRange(range5Start, range5End, range5, true);
-                                }
-                                else if (selectedRange === range5 && isNaN(selectedText)) {
-                                    setRange(range6Start, range6End, range6, true);
-                                }
+                                ngModelCtrl.$setViewValue('mm/dd/yyyy hh:mm AM');
+                                ngModelCtrl.$render();
+                                setRange(range1Start, range1End, range1, true);
+                                e.preventDefault();
+                                return;
+                                //var selectedText = getSelectedText();
+                                //if (selectedRange === range1 && !isNaN(selectedText)) {
+                                //    setValue(position1Format);
+                                //    setRange(range1Start, range1End, range1, true);
+                                //}
+                                //else if (selectedRange === range1 && isNaN(selectedText)) {
+                                //    setRange(range2Start, range2End, range2);
+                                //    setValue(position2Format);
+                                //    setRange(range2Start, range2End, range2, true);
+                                //}
+                                //else if (selectedRange === range2 && !isNaN(selectedText)) {
+                                //    setValue(position2Format);
+                                //    setRange(range2Start, range2End, range2, true);
+                                //}
+                                //else if (selectedRange === range2 && isNaN(selectedText)) {
+                                //    setRange(range3Start, range3End, range3, true);
+                                //    setValue(position3Format);
+                                //    setRange(range3Start, range3End, range3, true);
+                                //}
+                                //else if (selectedRange === range3 && !isNaN(selectedText)) {
+                                //    setValue(position3Format);
+                                //    setRange(range3Start, range3End, range3, true);
+                                //}
+                                //else if (selectedRange === range3 && isNaN(selectedText)) {
+                                //    setRange(range4Start, range4End, range4, true);
+                                //    setValue(position4Format);
+                                //    setRange(range4Start, range4End, range4, true);
+                                //}
+                                //else if (selectedRange === range4 && !isNaN(selectedText)) {
+                                //    setValue(position4Format);
+                                //    setRange(range4Start, range4End, range4, true);
+                                //}
+                                //else if (selectedRange === range4 && isNaN(selectedText)) {
+                                //    setRange(range5Start, range5End, range5, true);
+                                //    setValue(position5Format);
+                                //    setRange(range5Start, range5End, range5, true);
+                                //}
+                                //else if (selectedRange === range5 && !isNaN(selectedText)) {
+                                //    setValue(position5Format);
+                                //    setRange(range5Start, range5End, range5, true);
+                                //}
+                                //else if (selectedRange === range5 && isNaN(selectedText)) {
+                                //    setRange(range6Start, range6End, range6, true);
+                                //}
                             }
 
                             if (e.keyCode === 9 && !e.shiftKey) {
@@ -3766,6 +3869,13 @@ var app = angular.module('tru.type.lib',
                                 oldValue = parseInt(selectedText);
                                 newValue = getCharFromKeyCode(e);
 
+                                //NOTE: If selectedRange is not set assume an external event triggered the key event.
+                                if (selectedRange.length === 0) {
+                                    selectedRange = range1;
+                                    rangeInitialized = true;
+                                    externalEvent = true;
+                                }
+
                                 if (selectedRange === range1) {
                                     if (position1Format === 'mm') {
                                         if (oldValue === 1 && [0, 1, 2].indexOf(newValue) > -1 && !rangeInitialized) {
@@ -3778,6 +3888,7 @@ var app = angular.module('tru.type.lib',
                                             if ((rangeInitialized || isNaN(oldValue)) && newValue <= 1) {
                                                 setValue('0' + newValue.toString());
                                                 setRange(range1Start, range1End, range1, false);
+
                                             } else if (rangeInitialized && [2, 3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1) {
                                                 setValue('0' + newValue.toString());
                                                 setRange(range2Start, range2End, range2, true);
@@ -3861,7 +3972,7 @@ var app = angular.module('tru.type.lib',
                                                     setRange(range5Start, range5End, range5, true);
                                             }
                                             else {
-                                                if (!militaryTime && [2, 3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1 ) {
+                                                if (!militaryTime && [2, 3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1) {
                                                     setRange(range5Start, range5End, range5, true);
                                                     setValue('0' + newValue.toString());
                                                     setRange(range5Start, range5End, range5, false);
@@ -3908,7 +4019,7 @@ var app = angular.module('tru.type.lib',
 
                         });
 
-                        element.bind('mouseup', function(e){
+                        element.bind('mouseup', function (e) {
                             var caretPosition = getCaretPosition();
                             var sel = window.getSelection();
                             sel.removeAllRanges();
@@ -3932,19 +4043,18 @@ var app = angular.module('tru.type.lib',
                                 setRange(range6Start, range6End, range6, true);
                         });
 
-                        element.bind('mousemove', function(e){
-                            if(e.stopPropagation) e.stopPropagation();
-                            if(e.preventDefault) e.preventDefault();
+                        element.bind('mousemove', function (e) {
+                            if (e.stopPropagation) e.stopPropagation();
+                            if (e.preventDefault) e.preventDefault();
                             e.cancelBubble = true;
                             e.returnValue = false;
                             return false;
                         });
 
-                        element.bind('mousedown', function(e){
+                        element.bind('mousedown', function (e) {
                             var time = new Date().getTime();
 
-                            if((time - mouseDown) < 450)
-                            {
+                            if ((time - mouseDown) < 450) {
                                 previousMouseDown = mouseDown;
                                 mouseDown = time;
 
@@ -3956,7 +4066,7 @@ var app = angular.module('tru.type.lib',
                             mouseDown = time;
                         });
 
-                        element.bind('copy', function(e) {
+                        element.bind('copy', function (e) {
                             var textToPutOnClipboard = element[0].value;
 
                             if (isIe) {
@@ -3967,16 +4077,24 @@ var app = angular.module('tru.type.lib',
                             e.preventDefault();
                         });
 
-                        element.bind('cut', function(e){
+                        element.bind('cut', function (e) {
                             e.preventDefault();
                         });
 
-                        element.bind('paste', function(e){
+                        element.bind('paste', function (e) {
                             e.preventDefault();
                         });
 
-                        element.bind('focus', function(e){
-                            $timeout(function() {
+                        element.bind('focus', function (e) {
+                            if (!focusedValue)
+                                focusedValue = scope.field.value.$;
+
+                            $timeout(function () {
+                                if (externalEvent) {
+                                    externalEvent = false;
+                                    return;
+                                }
+
                                 var caretPosition = getCaretPosition();
                                 var sel = window.getSelection();
                                 sel.removeAllRanges();
@@ -4001,7 +4119,7 @@ var app = angular.module('tru.type.lib',
                             }, 0)
                         });
 
-                        element.bind('blur', function(e){
+                        element.bind('blur', function (e) {
                             if (ngModelCtrl.$modelValue === null)
                                 element[0].value = 'mm/dd/yyyy hh:mm AM';
                         });
@@ -4019,8 +4137,12 @@ var app = angular.module('tru.type.lib',
                         });
 
                         ngModelCtrl.$parsers.push(function (val) {
-                            if (val === 'mm/dd/yyyy hh:mm AM') {
-                                ngModelCtrl.$setValidity('invalid-date', true);
+                            if (val === 'mm/dd/yyyy hh:mm AM' || val === 'mm/dd/yyyy hh:mm PM') {
+                                if (!isNullable)
+                                    ngModelCtrl.$setValidity('invalid-date', false);
+                                else
+                                    ngModelCtrl.$setValidity('invalid-date', true);
+
                                 return null;
                             }
 
@@ -4029,7 +4151,7 @@ var app = angular.module('tru.type.lib',
                             dateParts.pop();
                             var datePartsJoined = dateParts.join('');
                             var isNumeric = isNumber(datePartsJoined);
-                            if (!isNumeric) {
+                            if (!isNumeric || parseInt(dateParts[0]) === 0 || parseInt(dateParts[2]) === 0 || parseInt(dateParts[3]) === 0) {
                                 ngModelCtrl.$setValidity('invalid-date', false);
                                 return new Date('Invalid');
                             }
@@ -4045,12 +4167,12 @@ var app = angular.module('tru.type.lib',
                                 ngModelCtrl.$setViewValue(dateParts[0] + '/' + zeroPad(day, 2) + '/' + dateParts[2] + ' ' + dateParts[3] + ':' + dateParts[4] + ' ' + period);
                             }
 
-                            var date = val.replace(/AM||PM/g,'');
+                            var date = val.replace(/AM||PM/g, '');
                             date = new Date(date);
 
                             if (!militaryTime) {
                                 var hours = parseInt(dateParts[3]);
-                                if (period ==='AM' && hours === 12) {
+                                if (period === 'AM' && hours === 12) {
                                     hours = 0;
                                 } else if (period === 'PM' && hours < 12) {
                                     hours += 12;
@@ -6346,11 +6468,26 @@ var app = angular.module('tru.type.lib',
                     return retValue;
                 };
 
+                this.isDate = function(date) {
+                    if ( Object.prototype.toString.call(date) === '[object Date]' ) {
+                        if (isNaN(date.getTime())) {
+                            return false;
+                        }
+                        else {
+                            return true;
+                        }
+                    }
+                    else {
+                        return false;
+                    }
+                };
+
                 return {
                     getCursorPosition: this.getCursorPosition,
                     getClosestParentByClass: this.getClosestParentByClass,
                     isUndefined: this.isUndefined,
-                    tryParseInt: this.tryParseInt
+                    tryParseInt: this.tryParseInt,
+                    isDate: this.isDate
                 }
             }
         ]);
@@ -6648,6 +6785,7 @@ var app = angular.module('tru.type.lib',
     var module = angular.module('std.formatters');
 
     module.filter('stdUsaAddress', ['dataService', function (dataService) {
+        var dataContext = dataService.createContext();
         var queryRunning;
         return function (cfg) {
             cfg = cfg.children;
@@ -6659,14 +6797,14 @@ var app = angular.module('tru.type.lib',
             if (cfg.city.value.$ !== null)
                 text += cfg.city.value.$ + ' ';
             if (cfg.state.value.$ !== null) {
-                var state = dataService.entityAccess('StdUSAState').findInCache(cfg.state.value.$);
+                var state = dataContext.entityAccess('StdUSAState').findInCache(cfg.state.value.$);
                 if (state)
                     text += state.Code + ', ';
                 else {
                     text += '(' + cfg.state.value.$ + '), ';
                     if (!queryRunning) {
                         queryRunning = true;
-                        dataService.entityAccess('StdUSAState').search()
+                        dataContext.entityAccess('StdUSAState').search()
                             .then(function() {
                                 //nothing to do
                             })
@@ -6825,7 +6963,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                   data-ng-trim=\"false\"\r" +
     "\n" +
-    "                   data-std-datetime=\"field\"\r" +
+    "                   data-std-datetime=\"field\" is-nullable=\"field.type.isNullable\"\r" +
     "\n" +
     "                   data-std-calendar display=\"show\"\r" +
     "\n" +

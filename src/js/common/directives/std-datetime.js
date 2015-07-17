@@ -4,11 +4,13 @@
     var module = angular.module('std.datetime', []);
 
     module.directive('stdDatetime',
-        ['$filter', '$timeout',
-            function ($filter, $timeout) {
+        ['$filter', '$timeout', '$parse',
+            function ($filter, $timeout, $parse) {
                 return {
                     require: 'ngModel',
                     link: function (scope, element, attrs, ngModelCtrl) {
+                        //TODO: Would like to pass field in as an isolated scope variable. Cannot do this currently due to the calendar directive already asking for isolation.
+                        var isNullable = $parse(attrs.isNullable)(scope);
                         var format = 'MM/dd/yyyy hh:mm a';
                         var timeZone = 0;
                         var formatParts = format.split(/[\s/:]+/);
@@ -47,6 +49,9 @@
 
                         var selectedRange = [];
                         var rangeInitialized = false;
+                        var externalEvent = false;
+                        var focusedValue;
+                        ngModelCtrl.rangeInitialized = rangeInitialized;
                         var militaryTime = false; //scope.stdTime.property.militaryTime;
 
                         var mouseDown = new Date().getTime(),
@@ -102,7 +107,7 @@
                         }
 
                         function getCharFromKeyCode(e) {
-                            if(e.keyCode >= 96 && e.keyCode <= 105)
+                            if (e.keyCode >= 96 && e.keyCode <= 105)
                                 return parseInt(String.fromCharCode(e.keyCode - 48));
 
                             return parseInt(String.fromCharCode(e.keyCode));
@@ -112,7 +117,18 @@
                             return !isNaN(parseFloat(n)) && isFinite(n);
                         }
 
-                        element.bind('keydown', function(e) {
+                        element.bind('keydown', function (e) {
+                            if (!focusedValue)
+                                focusedValue = scope.field.value.$;
+
+                            if (e.keyCode === 27) {
+                                ngModelCtrl.$setValidity('invalid-date', true);
+                                ngModelCtrl.$setViewValue($filter('date')(new Date(focusedValue), 'MM/dd/yyyy hh:mm a'));
+                                ngModelCtrl.$render();
+                                e.preventDefault();
+                                return;
+                            }
+
                             if (e.keyCode === 37) {
                                 if (selectedRange === range6) {
                                     setRange(range5Start, range5End, range5, true);
@@ -191,50 +207,55 @@
                             }
 
                             if (e.keyCode === 46) {
-                                var selectedText = getSelectedText();
-                                if (selectedRange === range1 && !isNaN(selectedText)) {
-                                    setValue(position1Format);
-                                    setRange(range1Start, range1End, range1, true);
-                                }
-                                else if (selectedRange === range1 && isNaN(selectedText)) {
-                                    setRange(range2Start, range2End, range2);
-                                    setValue(position2Format);
-                                    setRange(range2Start, range2End, range2, true);
-                                }
-                                else if (selectedRange === range2 && !isNaN(selectedText)) {
-                                    setValue(position2Format);
-                                    setRange(range2Start, range2End, range2, true);
-                                }
-                                else if (selectedRange === range2 && isNaN(selectedText)) {
-                                    setRange(range3Start, range3End, range3, true);
-                                    setValue(position3Format);
-                                    setRange(range3Start, range3End, range3, true);
-                                }
-                                else if (selectedRange === range3 && !isNaN(selectedText)) {
-                                    setValue(position3Format);
-                                    setRange(range3Start, range3End, range3, true);
-                                }
-                                else if (selectedRange === range3 && isNaN(selectedText)) {
-                                    setRange(range4Start, range4End, range4, true);
-                                    setValue(position4Format);
-                                    setRange(range4Start, range4End, range4, true);
-                                }
-                                else if (selectedRange === range4 && !isNaN(selectedText)) {
-                                    setValue(position4Format);
-                                    setRange(range4Start, range4End, range4, true);
-                                }
-                                else if (selectedRange === range4 && isNaN(selectedText)) {
-                                    setRange(range5Start, range5End, range5, true);
-                                    setValue(position5Format);
-                                    setRange(range5Start, range5End, range5, true);
-                                }
-                                else if (selectedRange === range5 && !isNaN(selectedText)) {
-                                    setValue(position5Format);
-                                    setRange(range5Start, range5End, range5, true);
-                                }
-                                else if (selectedRange === range5 && isNaN(selectedText)) {
-                                    setRange(range6Start, range6End, range6, true);
-                                }
+                                ngModelCtrl.$setViewValue('mm/dd/yyyy hh:mm AM');
+                                ngModelCtrl.$render();
+                                setRange(range1Start, range1End, range1, true);
+                                e.preventDefault();
+                                return;
+                                //var selectedText = getSelectedText();
+                                //if (selectedRange === range1 && !isNaN(selectedText)) {
+                                //    setValue(position1Format);
+                                //    setRange(range1Start, range1End, range1, true);
+                                //}
+                                //else if (selectedRange === range1 && isNaN(selectedText)) {
+                                //    setRange(range2Start, range2End, range2);
+                                //    setValue(position2Format);
+                                //    setRange(range2Start, range2End, range2, true);
+                                //}
+                                //else if (selectedRange === range2 && !isNaN(selectedText)) {
+                                //    setValue(position2Format);
+                                //    setRange(range2Start, range2End, range2, true);
+                                //}
+                                //else if (selectedRange === range2 && isNaN(selectedText)) {
+                                //    setRange(range3Start, range3End, range3, true);
+                                //    setValue(position3Format);
+                                //    setRange(range3Start, range3End, range3, true);
+                                //}
+                                //else if (selectedRange === range3 && !isNaN(selectedText)) {
+                                //    setValue(position3Format);
+                                //    setRange(range3Start, range3End, range3, true);
+                                //}
+                                //else if (selectedRange === range3 && isNaN(selectedText)) {
+                                //    setRange(range4Start, range4End, range4, true);
+                                //    setValue(position4Format);
+                                //    setRange(range4Start, range4End, range4, true);
+                                //}
+                                //else if (selectedRange === range4 && !isNaN(selectedText)) {
+                                //    setValue(position4Format);
+                                //    setRange(range4Start, range4End, range4, true);
+                                //}
+                                //else if (selectedRange === range4 && isNaN(selectedText)) {
+                                //    setRange(range5Start, range5End, range5, true);
+                                //    setValue(position5Format);
+                                //    setRange(range5Start, range5End, range5, true);
+                                //}
+                                //else if (selectedRange === range5 && !isNaN(selectedText)) {
+                                //    setValue(position5Format);
+                                //    setRange(range5Start, range5End, range5, true);
+                                //}
+                                //else if (selectedRange === range5 && isNaN(selectedText)) {
+                                //    setRange(range6Start, range6End, range6, true);
+                                //}
                             }
 
                             if (e.keyCode === 9 && !e.shiftKey) {
@@ -284,6 +305,13 @@
                                 oldValue = parseInt(selectedText);
                                 newValue = getCharFromKeyCode(e);
 
+                                //NOTE: If selectedRange is not set assume an external event triggered the key event.
+                                if (selectedRange.length === 0) {
+                                    selectedRange = range1;
+                                    rangeInitialized = true;
+                                    externalEvent = true;
+                                }
+
                                 if (selectedRange === range1) {
                                     if (position1Format === 'mm') {
                                         if (oldValue === 1 && [0, 1, 2].indexOf(newValue) > -1 && !rangeInitialized) {
@@ -296,6 +324,7 @@
                                             if ((rangeInitialized || isNaN(oldValue)) && newValue <= 1) {
                                                 setValue('0' + newValue.toString());
                                                 setRange(range1Start, range1End, range1, false);
+
                                             } else if (rangeInitialized && [2, 3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1) {
                                                 setValue('0' + newValue.toString());
                                                 setRange(range2Start, range2End, range2, true);
@@ -379,7 +408,7 @@
                                                     setRange(range5Start, range5End, range5, true);
                                             }
                                             else {
-                                                if (!militaryTime && [2, 3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1 ) {
+                                                if (!militaryTime && [2, 3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1) {
                                                     setRange(range5Start, range5End, range5, true);
                                                     setValue('0' + newValue.toString());
                                                     setRange(range5Start, range5End, range5, false);
@@ -426,7 +455,7 @@
 
                         });
 
-                        element.bind('mouseup', function(e){
+                        element.bind('mouseup', function (e) {
                             var caretPosition = getCaretPosition();
                             var sel = window.getSelection();
                             sel.removeAllRanges();
@@ -450,19 +479,18 @@
                                 setRange(range6Start, range6End, range6, true);
                         });
 
-                        element.bind('mousemove', function(e){
-                            if(e.stopPropagation) e.stopPropagation();
-                            if(e.preventDefault) e.preventDefault();
+                        element.bind('mousemove', function (e) {
+                            if (e.stopPropagation) e.stopPropagation();
+                            if (e.preventDefault) e.preventDefault();
                             e.cancelBubble = true;
                             e.returnValue = false;
                             return false;
                         });
 
-                        element.bind('mousedown', function(e){
+                        element.bind('mousedown', function (e) {
                             var time = new Date().getTime();
 
-                            if((time - mouseDown) < 450)
-                            {
+                            if ((time - mouseDown) < 450) {
                                 previousMouseDown = mouseDown;
                                 mouseDown = time;
 
@@ -474,7 +502,7 @@
                             mouseDown = time;
                         });
 
-                        element.bind('copy', function(e) {
+                        element.bind('copy', function (e) {
                             var textToPutOnClipboard = element[0].value;
 
                             if (isIe) {
@@ -485,16 +513,24 @@
                             e.preventDefault();
                         });
 
-                        element.bind('cut', function(e){
+                        element.bind('cut', function (e) {
                             e.preventDefault();
                         });
 
-                        element.bind('paste', function(e){
+                        element.bind('paste', function (e) {
                             e.preventDefault();
                         });
 
-                        element.bind('focus', function(e){
-                            $timeout(function() {
+                        element.bind('focus', function (e) {
+                            if (!focusedValue)
+                                focusedValue = scope.field.value.$;
+
+                            $timeout(function () {
+                                if (externalEvent) {
+                                    externalEvent = false;
+                                    return;
+                                }
+
                                 var caretPosition = getCaretPosition();
                                 var sel = window.getSelection();
                                 sel.removeAllRanges();
@@ -519,7 +555,7 @@
                             }, 0)
                         });
 
-                        element.bind('blur', function(e){
+                        element.bind('blur', function (e) {
                             if (ngModelCtrl.$modelValue === null)
                                 element[0].value = 'mm/dd/yyyy hh:mm AM';
                         });
@@ -537,8 +573,12 @@
                         });
 
                         ngModelCtrl.$parsers.push(function (val) {
-                            if (val === 'mm/dd/yyyy hh:mm AM') {
-                                ngModelCtrl.$setValidity('invalid-date', true);
+                            if (val === 'mm/dd/yyyy hh:mm AM' || val === 'mm/dd/yyyy hh:mm PM') {
+                                if (!isNullable)
+                                    ngModelCtrl.$setValidity('invalid-date', false);
+                                else
+                                    ngModelCtrl.$setValidity('invalid-date', true);
+
                                 return null;
                             }
 
@@ -547,7 +587,7 @@
                             dateParts.pop();
                             var datePartsJoined = dateParts.join('');
                             var isNumeric = isNumber(datePartsJoined);
-                            if (!isNumeric) {
+                            if (!isNumeric || parseInt(dateParts[0]) === 0 || parseInt(dateParts[2]) === 0 || parseInt(dateParts[3]) === 0) {
                                 ngModelCtrl.$setValidity('invalid-date', false);
                                 return new Date('Invalid');
                             }
@@ -563,12 +603,12 @@
                                 ngModelCtrl.$setViewValue(dateParts[0] + '/' + zeroPad(day, 2) + '/' + dateParts[2] + ' ' + dateParts[3] + ':' + dateParts[4] + ' ' + period);
                             }
 
-                            var date = val.replace(/AM||PM/g,'');
+                            var date = val.replace(/AM||PM/g, '');
                             date = new Date(date);
 
                             if (!militaryTime) {
                                 var hours = parseInt(dateParts[3]);
-                                if (period ==='AM' && hours === 12) {
+                                if (period === 'AM' && hours === 12) {
                                     hours = 0;
                                 } else if (period === 'PM' && hours < 12) {
                                     hours += 12;

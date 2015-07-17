@@ -4,6 +4,7 @@
     var module = angular.module('std.formatters');
 
     module.filter('stdUsaAddress', ['dataService', function (dataService) {
+        var dataContext = dataService.createContext();
         var queryRunning;
         return function (cfg) {
             cfg = cfg.children;
@@ -15,14 +16,14 @@
             if (cfg.city.value.$ !== null)
                 text += cfg.city.value.$ + ' ';
             if (cfg.state.value.$ !== null) {
-                var state = dataService.entityAccess('StdUSAState').findInCache(cfg.state.value.$);
+                var state = dataContext.entityAccess('StdUSAState').findInCache(cfg.state.value.$);
                 if (state)
                     text += state.Code + ', ';
                 else {
                     text += '(' + cfg.state.value.$ + '), ';
                     if (!queryRunning) {
                         queryRunning = true;
-                        dataService.entityAccess('StdUSAState').search()
+                        dataContext.entityAccess('StdUSAState').search()
                             .then(function() {
                                 //nothing to do
                             })

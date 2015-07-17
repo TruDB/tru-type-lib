@@ -760,7 +760,7 @@
         });
 
         describe('keydown - range2', function() {
-            it('when 1 is entered, range two value should be 01 and still be selected', function () {
+            iit('when 1 is entered, range two value should be 01 and still be selected', function () {
                 compileAndAppendElement();
                 var input = document.getElementsByTagName('input')[0];
 

@@ -4,7 +4,7 @@
             <input data-ng-model="field.value.$"
                    data-ng-disabled="!field.editor.isEditing || !field.type.canEdit"
                    data-ng-trim="false"
-                   data-std-datetime="field"
+                   data-std-datetime="field" is-nullable="field.type.isNullable"
                    data-std-calendar display="show"
                    data-z-validate
                    type="text"

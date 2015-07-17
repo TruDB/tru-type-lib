@@ -67,8 +67,8 @@
         }]);
 
     module.directive('stdTextboxQuery',
-        ['$templateCache',
-            function($templateCache) {
+        ['$templateCache', '$timeout',
+            function ($templateCache, $timeout) {
                 return {
                     restrict: 'E',
                     scope: {

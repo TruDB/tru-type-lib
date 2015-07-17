@@ -30,92 +30,90 @@ std-font - styles
 .ico-end-with:before {
     content: "\e603";
 }
-
 .ico-start-width:before {
     content: "\e60a";
 }
-
 .ico-contains:before {
     content: "\e60c";
 }
-
 .ico-less-than:before {
     content: "\e60d";
 }
-
 .ico-greater-than:before {
     content: "\e60e";
 }
-
 .ico-less-than-or-equal:before {
     content: "\e60f";
 }
-
 .ico-greater-than-or-equal:before {
     content: "\e610";
 }
-
 .ico-not-equal:before {
     content: "\e611";
 }
-
 .ico-equal:before {
     content: "\e612";
 }
-
+.ico-pencil:before {
+    content: "\e617";
+}
 .ico-report:before {
     content: "\e616";
 }
-
 .ico-file:before {
     content: "\e615";
 }
-
 .ico-calendar:before {
     content: "\e600";
 }
-
+.ico-lock:before {
+    content: "\e61c";
+}
+.ico-unlocked:before {
+    content: "\e61d";
+}
 .ico-cloud-download:before {
     content: "\e601";
 }
-
+.ico-warning:before {
+    content: "\e618";
+}
+.ico-arrow-right:before {
+    content: "\e619";
+}
+.ico-arrow-down:before {
+    content: "\e61a";
+}
+.ico-arrow-down-right:before {
+    content: "\e61b";
+}
 .ico-github:before {
     content: "\e602";
 }
-
 .ico-libreoffice:before {
     content: "\e604";
 }
-
 .ico-file-pdf:before {
     content: "\e605";
-    color: red;
 }
-
 .ico-file-openoffice:before {
     content: "\e606";
 }
-
 .ico-file-word:before {
     content: "\e607";
 }
-
 .ico-file-excel:before {
     content: "\e608";
 }
-
 .ico-file-zip:before {
     content: "\e609";
 }
-
 .ico-file-powerpoint:before {
     content: "\e60b";
 }
-
 .ico-file-xml:before {
     content: "\e613";
 }
-
 .ico-file-css:before {
     content: "\e614";
 }
