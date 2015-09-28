@@ -48,7 +48,7 @@
             };
 
             $scope.controlValueIsUndefined = function () {
-                return (typeof $scope.field === 'undefined') || (typeof $scope.field.value.$ === 'undefined');
+                return (typeof $scope.field === 'undefined') || (typeof $scope.field.value.$ === 'undefined' || $scope.field.value.$ === '');
             };
 
             $scope.onOperatorClick = function() {

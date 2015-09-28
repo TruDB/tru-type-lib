@@ -15,6 +15,7 @@
                         var isNullable = scope.stdIntegerOnly.type.isNullable;
                         var isEditContext = scope.stdIntegerOnly.isEditContext;
                         var isSearchContext = scope.stdIntegerOnly.isSearchContext;
+                        var isListContext = scope.stdIntegerOnly.isListContext;
                         var maxValue = scope.stdIntegerOnly.type.property.maximumValue;
                         var minValue = scope.stdIntegerOnly.type.property.minimumValue;
                         maxValue = typeof maxValue === 'undefined' ? 2147483647 : maxValue;
@@ -55,14 +56,14 @@
                             //clean === '' because isNaN return false for empty string.
                             if (clean === '' && isSearchContext) {
                                 return undefined;
-                            } else if (clean === '' && isEditContext) {
+                            } else if (clean === '' && (isEditContext || isListContext)) {
                                 return null;
                             } else if (isNaN(clean) && isSearchContext) {
                                 if (isNullable)
                                     return null;
                                 else
                                     return undefined;
-                            } else if (isNaN(clean) && isEditContext) {
+                            } else if (isNaN(clean) && (isEditContext || isListContext)) {
                                 return null;
                             } else
                                 return parseInt(clean);

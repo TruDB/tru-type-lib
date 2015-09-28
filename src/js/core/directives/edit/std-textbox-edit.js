@@ -17,8 +17,8 @@
      * `<a href="" ng-click="list.addItem()">Add Item</a>`
      */
     module.directive('stdTextboxEdit',
-        ['$templateCache', 'stdDisplay',
-            function($templateCache, display) {
+        ['$templateCache', '$timeout', 'stdDisplay',
+            function($templateCache, $timeout, display) {
                 return {
                     restrict: 'E',
                     scope: {
@@ -32,14 +32,20 @@
 
                         angular.element(input).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
-                            if (!scope.field.isListContext)
-                                input.select();
+                            if (!scope.field.isListContext) {
+                                $timeout(function() {
+                                    input.select();
+                                });
+                            }
                         });
 
                         angular.element(input).bind('keydown', function (e) {
                             if (e.keyCode === 27) {
                                 scope.field.value.$ = oldValue;
                                 input.blur();
+                            }
+                            if (e.keyCode === 46) {
+                                scope.field.value.$ = null;
                             }
                         });
 

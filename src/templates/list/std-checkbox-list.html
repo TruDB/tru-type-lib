@@ -1,13 +1,10 @@
-<div>
-    <div class="ttl-checkbox-list-wrapper">
+<div tabindex="-1">
+    <div class="ttl-checkbox-list-wrapper" tabindex="-1">
         <input data-ng-model="field.value.$"
-        data-std-indeterminate="field.type.isNullable"
-        readonly="readonly"
-        onfocus="this.blur();"
-        onkeydown="return false"
-        onclick="this.checked=!this.checked;"
-        tabindex="-1"
-        class="ttl-checkbox-list"
-        type="checkbox"/>
+            data-ng-disabled="!field.editor.isEditing || !field.type.canEdit"
+            data-std-indeterminate="field.type.isNullable"
+            tabindex="-1"
+            class="ttl-checkbox-list"
+            type="checkbox"/>
     </div>
 </div>

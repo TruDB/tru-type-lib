@@ -1,0 +1,55 @@
+<div class="ttl-password-edit-wrapper">
+    <div
+            std-modals
+            ng-show="subview"
+            class="ttl-modals"
+            ng-switch="subview">
+        <div data-ng-controller="stdRecordPickerModalController"
+             data-ng-switch-when="recordPicker"
+             data-tru-label-container
+             data-std-trap-focus
+             class="ttl-modal" style="width:700px;">
+            <h4 style="margin: 0 0;">
+                Record Picker
+            </h4>
+            <p style="float:right;clear:both;">
+                <div std-picker-view></div>
+            </p>
+            <p style="float:left;" data-ng-show="field.value.$ && field.type.isNullable">
+                <button data-ng-click="clear()"
+                        type="button"
+                        class="tvl-btn">Clear
+                </button>
+            </p>
+            <p style="float:right;clear:both;">
+                <button data-ng-click="submit()"
+                        data-ng-keydown="submitByEnter($event)"
+                        data-ng-disabled="!selectedId"
+                        data-ng-class="{'tvl-btn-primary': selectedId && !searchIsFocused}"
+                        type="button"
+                        class="tvl-btn">OK
+                </button>
+                <button data-ng-click="cancel($event)"
+                        type="button"
+                        class="tvl-btn"
+                        >Cancel
+                </button>
+            </p>
+        </div>
+    </div>
+    <tru-label label="{{label}}">
+        <div class="ttl-record-picker-wrapper">
+            <input data-ng-model="data.displayValue"
+                   data-z-validate
+                   disabled="disabled"
+                   type="text"
+                    style="float:left;width:auto"/>
+            <button data-ng-click="showRecordPickerModal()"
+                    data-ng-disabled="!field.editor.isEditing || !field.type.canEdit"
+                    class="tvl-btn"
+                    style="float:left;height:20px;"
+                    >...
+            </button>
+        </div>
+    </tru-label>
+</div>

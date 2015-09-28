@@ -22,6 +22,13 @@
                     template: $templateCache.get('src/templates/edit/std-datetime-edit.html'),
                     controller: 'stdDatetimeEditController',
                     link: function (scope, element) {
+                        var input = element[0].querySelectorAll('input')[0];
+                        angular.element(input).bind('keydown', function (e) {
+                            if (e.keyCode === 46) {
+                                scope.field.value.$ = null;
+                            }
+                        });
+
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };

@@ -1,9 +1,11 @@
 <tru-label label="{{label}}" field="field">
+    <div data-ng-show="!data.show" style="position:relative;background-color:#fff;height:20px;width:100%;z-index:100;"><p>Loading...</p></div>
     <select data-ng-model="data.value"
             data-ng-options="x.value.$ as x.label for x in choices"
             data-ng-change="onChange()"
             data-ng-disabled="!field.editor.isEditing || !field.type.canEdit"
+            data-ng-show="data.show"
             data-z-validate
-            class="dropdown control">
+            class="ttl-dropdown-edit dropdown control">
     </select>
 </tru-label>

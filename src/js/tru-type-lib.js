@@ -21,6 +21,7 @@ var app = angular.module('tru.type.lib',
         'std.textbox.edit',
         'std.usa.address.edit',
         'std.usa.dollar.edit',
+        'std.record.picker.edit',
 
         //Search Controls
         'std.checkbox.query',
@@ -48,6 +49,11 @@ var app = angular.module('tru.type.lib',
         //Formatters
         'std.formatters',
 
+        'std.modals',
+        'std.trap.focus',
+        'std.grid.focus',
+        'std.search.focus',
+
         //Services
         'std.date',
         'std.time',
@@ -63,12 +69,12 @@ var app = angular.module('tru.type.lib',
         'std.file.reader',
         'std.operator.lookup',
         'std.indeterminate',
-        'std.grid.focus',
         'std.util',
         'std.download',
         'std.float',
         'std.usa.dollar',
         'std.select.value.converter',
         'std.filter',
-        'std.percent'
+        'std.percent',
+        'std.modal'
     ]);

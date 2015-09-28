@@ -73,6 +73,50 @@ Date - Styles
     user-select: none;
 }
 /* ---------------------------------------------------------------------
+Modal - Styles
+------------------------------------------------------------------------ */
+
+div.ttl-modals {
+    background-color: rgba( 0, 0, 0, 0.8 ) ;
+    bottom: 0px;
+    left: 0px;
+    position: fixed;
+    right: 0px;
+    top: 0px;
+    z-index: 10000000;
+}
+
+div.ttl-modals.ng-hide {
+    background-color: rgba( 0, 0, 0, 0 );
+}
+
+div.ttl-modals.ng-hide-add.ng-hide-add-active,
+div.ttl-modals.ng-hide-remove.ng-hide-remove-active {
+    transition: 250ms ease all;
+}
+
+div.ttl-modals > .ttl-modal {
+    background-color: #fff;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    padding: 10px;
+    position: fixed;
+    left: 50%;
+    margin-left: -350px;
+    top: 200px;
+    width: 400px;
+    z-index: 10000001;
+}
+
+div.ttl-modals.ng-hide > .ttl-modal.ng-enter {
+    top: -200px;
+    transition: 250ms ease top;
+}
+
+div.ttl-modals.ng-hide > .ttl-modal.ng-enter.ng-enter-active {
+    top: 200px;
+}
+/* ---------------------------------------------------------------------
 std-adorner-edit - styles
 ------------------------------------------------------------------------ */
 
@@ -160,7 +204,14 @@ Datetime-Edit Styles
 }
 
 
+/* ---------------------------------------------------------------------
+std-dropdown-edit - styles
+------------------------------------------------------------------------ */
 
+.ttl-dropdown-edit option {
+    font-family: Calibri, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+}
 /* ---------------------------------------------------------------------
 File-Edit Styles
 ------------------------------------------------------------------------ */
@@ -199,9 +250,24 @@ Password-Edit Styles
 }
 
 .ttl-password-edit-password-confirm-wrapper-not-editing {
-    padding-left: 0 !important;
+     padding-left: 0 !important;
+ }
+
+.ttl-password-edit:focus {
+    border-color: rgba(82,168,236,.8);
+    outline: 0;
+    outline: thin dotted \9;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(82,168,236,.6);
+    -moz-box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(82,168,236,.6);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(82,168,236,.6);
 }
 
+/* ---------------------------------------------------------------------
+Record-Picker-Edit Styles
+------------------------------------------------------------------------ */
+.ttl-record-picker-wrapper {
+    width: 100% !important;
+}
 
 
 /* ---------------------------------------------------------------------
@@ -253,7 +319,14 @@ std-checkbox-query - styles
 
 
 
+/* ---------------------------------------------------------------------
+std-dropdown-query - styles
+------------------------------------------------------------------------ */
 
+.ttl-dropdown-query option {
+    font-family: Calibri, Helvetica, Arial, sans-serif;
+    font-size: 14px;
+}
 /* ---------------------------------------------------------------------
 std-integer-query - styles
 ------------------------------------------------------------------------ */
@@ -357,11 +430,23 @@ std-common - styles
 }
 
 input[type="password"].ttl-invalid-input  {
-    border: 1px solid red;
+    border: 1px solid red !important;
 }
 
 input[type="password"]:focus .ttl-invalid-input  {
+    border: 1px solid red !important;
+}
+
+button.ttl-invalid-button  {
     border: 1px solid red;
+}
+
+button:active .ttl-invalid-button  {
+    border: 1px solid red !important;
+}
+
+button:focus .ttl-invalid-button  {
+    border: 1px solid red !important;
 }
 
 .ttl-operator-icon-wrapper {

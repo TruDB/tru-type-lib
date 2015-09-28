@@ -1,8 +1,6 @@
 /* ---------------------------------------------------------------------
-std-dropdown-edit - styles
+Record-Picker-Edit Styles
 ------------------------------------------------------------------------ */
-
-.ttl-dropdown-edit option {
-    font-family: Calibri, Helvetica, Arial, sans-serif;
-    font-size: 14px;
+.ttl-record-picker-wrapper {
+    width: 100% !important;
 }

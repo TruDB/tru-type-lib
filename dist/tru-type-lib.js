@@ -21,6 +21,7 @@ var app = angular.module('tru.type.lib',
         'std.textbox.edit',
         'std.usa.address.edit',
         'std.usa.dollar.edit',
+        'std.record.picker.edit',
 
         //Search Controls
         'std.checkbox.query',
@@ -48,6 +49,11 @@ var app = angular.module('tru.type.lib',
         //Formatters
         'std.formatters',
 
+        'std.modals',
+        'std.trap.focus',
+        'std.grid.focus',
+        'std.search.focus',
+
         //Services
         'std.date',
         'std.time',
@@ -63,14 +69,14 @@ var app = angular.module('tru.type.lib',
         'std.file.reader',
         'std.operator.lookup',
         'std.indeterminate',
-        'std.grid.focus',
         'std.util',
         'std.download',
         'std.float',
         'std.usa.dollar',
         'std.select.value.converter',
         'std.filter',
-        'std.percent'
+        'std.percent',
+        'std.modal'
     ]);
 (function () {
     'use strict';
@@ -142,20 +148,31 @@ var app = angular.module('tru.type.lib',
                         field: '=',
                         label: '@'
                     },
-                    template: function(element) {
+                    template: function (element) {
                         if (util.getClosestParentByClass(element[0], '.ui-grid-render-container')) {
                             return $templateCache.get('src/templates/list/std-checkbox-list-edit.html');
                         }
                         return $templateCache.get('src/templates/edit/std-checkbox-edit.html');
                     },
                     link: function (scope, element) {
+                        var ctrlDefault = scope.field.property.default;
+                        var isNullable = scope.field.type.isNullable;
+
                         var oldValue;
                         var input = element[0].querySelectorAll('input')[0];
 
                         angular.element(input).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
-                            if (!scope.field.isListContext)
+                            if (!scope.field.isListContext) {
                                 input.select();
+                            }
+
+                            if (scope.field.isListContext) {
+                                scope.$apply(function () {
+                                    scope.field.value.$ = !scope.field.value.$;
+                                });
+                            }
+
                         });
 
                         angular.element(input).bind('keydown', function (e) {
@@ -164,6 +181,10 @@ var app = angular.module('tru.type.lib',
                                 input.blur();
                             }
                         });
+
+                        if (scope.field.value.$ === null && !isNullable && !ctrlDefault) {
+                            scope.field.value.$ = false;
+                        }
 
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
@@ -217,6 +238,13 @@ var app = angular.module('tru.type.lib',
                     template: $templateCache.get('src/templates/edit/std-datetime-edit.html'),
                     controller: 'stdDatetimeEditController',
                     link: function (scope, element) {
+                        var input = element[0].querySelectorAll('input')[0];
+                        angular.element(input).bind('keydown', function (e) {
+                            if (e.keyCode === 46) {
+                                scope.field.value.$ = null;
+                            }
+                        });
+
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -358,12 +386,13 @@ var app = angular.module('tru.type.lib',
 
     var module = angular.module('std.dropdown.edit', []);
 
-    module.controller('stdDropdownEditController', ['$scope',
-        function ($scope) {
+    module.controller('stdDropdownEditController', ['$scope', '$element', '$timeout',
+        function ($scope, $element, $timeout) {
             var self = this;
 
             self.init = function () {
                 $scope.data = {};
+                $scope.data.show = false;
                 $scope.field.queryChoices($scope).then(function (results) {
                     $scope.choices = [];
                     angular.forEach(results, function (value, key) {
@@ -378,10 +407,17 @@ var app = angular.module('tru.type.lib',
 
                     if ($scope.field.type.isNullable && !$scope.field.value.$)
                         $scope.data.value = $scope.choices[0].value.$;
+
+                    $scope.data.show = true;
+
+                    if ($scope.field.isListContext) {
+                        $timeout(function() {
+                            var select = $element[0].querySelectorAll('select')[0];
+                            select.focus();
+                        });
+                    }
                 });
             };
-
-            self.init();
 
             $scope.onChange = function () {
                 if ($scope.data.value === -1)
@@ -394,8 +430,8 @@ var app = angular.module('tru.type.lib',
         }]);
 
     module.directive('stdDropdownEdit',
-        ['$templateCache', 'stdDisplay',
-            function ($templateCache, display) {
+        ['$templateCache', 'stdDisplay', '$timeout',
+            function ($templateCache, display, $timeout) {
                 return {
                     restrict: 'E',
                     scope: {
@@ -410,6 +446,15 @@ var app = angular.module('tru.type.lib',
 
                         angular.element(select).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
+
+                            //CHROME/SAFARI ONLY: Opens dropdown on focus 
+                            if (scope.field.isListContext) {
+                                $timeout(function() {
+                                    var event = document.createEvent('MouseEvents');
+                                    event.initMouseEvent('mousedown', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+                                    select.dispatchEvent(event);
+                                });
+                            }
                         });
 
                         angular.element(select).bind('keydown', function (e) {
@@ -418,10 +463,8 @@ var app = angular.module('tru.type.lib',
                                 select.blur();
                             }
                             if (e.keyCode === 46) {
-                                if (scope.field.type.isNullable) {
-                                    scope.data.value === -1
-                                    scope.field.value.$ = null;
-                                }
+                                scope.data.value === -1
+                                scope.field.value.$ = null;
                             }
                         });
 
@@ -803,92 +846,187 @@ var app = angular.module('tru.type.lib',
             }
         ]);
 })();
-(function(){
+(function () {
     'use strict';
 
     var module = angular.module('std.password.edit', []);
 
-    module.controller('stdPasswordEditController', ['$scope',
-        function ($scope) {
-            var self = this;
-            self.maxLength = $scope.field.type.property.maxLength ? $scope.field.type.property.maxLength : 10;
+    module.controller('stdPasswordModalController',
+        ['$scope', '$element', '$timeout', '$document', 'stdModal',
+            function ($scope, $element, $timeout, $document, modal) {
+                var passwordInput, cancelButton;
 
-            self.validate = function() {
-                $scope.invalidMessage = '';
+                $timeout(function () {
+                    var elements = $element[0].querySelectorAll('input,button');
+                    passwordInput = elements[0];
+                    cancelButton = elements[elements.length - 1];
+                    if (passwordInput) {
+                        passwordInput.focus();
+                    }
+                });
 
-                if ($scope.data.password !== $scope.data.confirmPassword) {
-                    $scope.invalidMessage = " 'Password' does not match.";
-                    $scope.invalid = true;
-                }
-                if (!$scope.data.password) {
-                    $scope.invalidMessage += " 'Password' is required.";
-                    $scope.invalid = true;
-                }
-                if ($scope.data.password && !$scope.data.confirmPassword) {
-                    $scope.invalidMessage += " 'Confirm Password' is required.";
-                    $scope.invalid = true;
-                }
-                if ($scope.data.password && $scope.data.password.length > self.maxLength) {
-                    $scope.invalidMessage += " 'Password' exceeds maximum character length of " + self.maxLength + ".";
-                    $scope.invalid = true;
-                }
-                if ($scope.data.confirmPassword && $scope.data.confirmPassword.length > self.maxLength) {
-                    $scope.invalidMessage += " 'Confirm Password' exceeds maximum character length of " + self.maxLength + ".";
-                    $scope.invalid = true;
-                }
-                if (!$scope.invalidMessage) {
-                    $scope.invalid = false;
-                }
-            };
-
-            self.init = function() {
-                $scope.data = {
-                    password: $scope.field.value.$,
-                    confirmPassword: $scope.field.value.$
+                function documentKeyDownFn(e) {
+                    if (e.keyCode === 13 && $scope.formIsValid) {
+                        modal.resolve($scope.data.password);
+                    }
+                    if (e.keyCode === 27) {
+                        modal.reject();
+                    }
                 };
-                self.validate();
-            };
 
-            self.init();
+                function validate() {
+                    $scope.errorMessage = '';
+                    $scope.confirmErrorMessage = '';
 
-            $scope.mouseEnter = function () {
-                $scope.mouseOver = true;
-                self.validate();
-            };
-            $scope.mouseLeave = function () {
-                $scope.mouseOver = false;
-                self.validate();
-            };
+                    if (!$scope.data.password)
+                        $scope.errorMessage = 'Password is required.';
 
-            $scope.onChange = function() {
-                $scope.field.value.$ = $scope.data.password;
-                self.validate();
-            };
+                    if (!$scope.data.confirmPassword)
+                        $scope.confirmErrorMessage = 'Confirm password is required.';
 
-            $scope.onConfirmChange = function() {
-                self.validate();
-            };
+                    if ($scope.data.password !== $scope.data.confirmPassword) {
+                        if ($scope.errorMessage)
+                            $scope.errorMessage += ' | Password and confirm password must match.';
+                        else
+                            $scope.errorMessage += 'Password and confirm password must match.';
+                        if ($scope.confirmErrorMessage)
+                            $scope.confirmErrorMessage += '| Password and confirm password must match.';
+                        else
+                            $scope.confirmErrorMessage += 'Password and confirm password must match.';
+                    }
 
-            $scope.readOnlyPasswordPlaceHolder = undefined;
-            $scope.passwordPlaceHolder = undefined;
-            $scope.mouseOver = false;
-            $scope.invalid = false;
-            $scope.invalidMessage = undefined;
+                    $scope.formIsValid = !($scope.errorMessage || $scope.confirmErrorMessage);
+                }
 
-            $scope.$watch('field.editor.isEditing', function (isEditing) {
-                $scope.readOnlyPasswordPlaceHolder = $scope.data.password ? 'Password Exists' : 'No Password Yet';
-                $scope.passwordPlaceHolder = $scope.data.confirmPassword ? 'Password Exists, Change Password' : 'No Password Yet, Set New Password';
-            });
+                $scope.data = { password: '', confirmPassword: '' };
 
-            $scope.$watch('field.value.$', function () {
-                if (!$scope.field.editor.isEditing)
-                    self.init();
-            });
-        }]);
+                $scope.onCancelClick = modal.reject;
+                $scope.formIsValid = false;
+                $scope.errorMessage = '';
+                $scope.confirmErrorMessage = '';
+                $scope.mouseOverPassword = false;
+                $scope.mouseOverConfirmPassword = false;
+
+                $scope.onOkKeyDown = function (e) {
+                    if (e.keyCode === 13)
+                        $scope.onOkClick();
+                };
+
+                $scope.onPasswordKeyDown = function (e) {
+                    if (e.keyCode === 9 && e.shiftKey) {
+                        e.preventDefault();
+                        cancelButton.focus();
+                    }
+                };
+
+                $scope.onCancelKeyDown = function (e) {
+                    if (e.keyCode === 9 && !e.shiftKey) {
+                        e.preventDefault();
+                        passwordInput.focus();
+                    }
+                    if (e.keyCode === 13)
+                        modal.reject();
+                };
+
+                $scope.onPasswordChange = function () {
+                    validate();
+                };
+
+                $scope.onConfirmPasswordChange = function () {
+                    validate();
+                };
+
+                $scope.onPasswordMouseEnter = function () {
+                    $scope.mouseOverPassword = true;
+                };
+
+                $scope.onPasswordMouseLeave = function () {
+                    $scope.mouseOverPassword = false;
+                };
+
+                $scope.onConfirmPasswordMouseEnter = function () {
+                    $scope.mouseOverConfirmPassword = true;
+                };
+
+                $scope.onConfirmPasswordMouseLeave = function () {
+                    $scope.mouseOverConfirmPassword = false;
+                };
+
+                $scope.onClearClick = function () {
+                    modal.resolve(null);
+                };
+
+                $scope.onOkClick = function () {
+                    modal.resolve($scope.data.password);
+                };
+
+                $scope.$on('$destroy', function () {
+                    angular.element($document[0]).off('keydown', documentKeyDownFn);
+                });
+
+                angular.element($document[0]).on('keydown', documentKeyDownFn);
+            }]);
+
+    module.controller('stdPasswordEditController',
+        ['$scope', '$element', '$timeout', 'stdModal',
+            function ($scope, $element, $timeout, modal) {
+                var self = this;
+
+                self.openModal = function () {
+                    var promise = modal.open(
+                        'password',
+                        {
+                            message: ''
+                        }
+                    );
+                    promise.then(
+                        function handleResolve(response) {
+                            $scope.field.value.$ = response;
+                            self.focusedElement();
+                        },
+                        function handleReject(error) {
+                            self.focusedElement();
+                        }
+                    );
+                };
+
+                self.focusedElement = function () {
+                    $timeout(function () {
+                        $element[0].querySelectorAll('button')[0].focus();
+                    });
+                };
+
+                self.init = function () {
+                    $scope.setOrChange = $scope.field.value.$ ? 'Edit' : 'Set';
+                };
+
+                $scope.onPasswordButtonClick = function () {
+                    self.openModal();
+                };
+
+                $scope.onPasswordButtonKeyDown = function (e) {
+                    if (e.keyCode === 13)
+                        self.openModal();
+                };
+
+                $scope.mouseOverPasswordButton = false;
+
+                $scope.onMouseEnterPasswordButton = function () {
+                    $scope.mouseOverPasswordButton = true;
+                };
+
+                $scope.onMouseLeavePasswordButton = function () {
+                    $scope.mouseOverPasswordButton = false;
+                };
+
+                $scope.$watch('field.value.$', function () { self.init(); });
+            }]);
+
+
 
     module.directive('stdPasswordEdit',
-        ['$templateCache', 'stdDisplay',
-            function($templateCache, display) {
+        ['$templateCache', '$timeout', 'stdDisplay',
+            function ($templateCache, $timeout, display) {
                 return {
                     restrict: 'E',
                     scope: {
@@ -896,8 +1034,9 @@ var app = angular.module('tru.type.lib',
                         label: '@'
                     },
                     controller: 'stdPasswordEditController',
+                    require: ['^stdPasswordEdit'],
                     template: $templateCache.get('src/templates/edit/std-password-edit.html'),
-                    link: function(scope, element) {
+                    link: function (scope, element, attrs, ctrl) {
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -920,6 +1059,106 @@ var app = angular.module('tru.type.lib',
                     },
                     template: $templateCache.get('src/templates/edit/std-percent-edit.html'),
                     link: function(scope, element) {
+                        display.setVisibility(element, scope.field.type.canDisplay);
+                    }
+                };
+            }
+        ]);
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.record.picker.edit', []);
+
+    module.directive('stdPickerView', ['$compile', '$http', function ($compile, $http) {
+        return {
+            restrict: 'A',
+            replace: false,
+            link: function (scope, element, attrs) {
+                var tpl = $compile('<div ' + scope.field.property.pickerName + '-picker' +' field="field" view="view"></div>')(scope);
+                element.append(tpl);
+            }
+        };
+    }]);
+
+    module.controller('stdRecordPickerModalController',
+        ['$scope', '$element', '$timeout', 'stdModal',
+            function ($scope, $element, $timeout, modal) {
+                $scope.selectedId = 0;
+                $scope.searchIsFocused = true;
+
+                $scope.clear = function() {
+                    modal.resolve(null);
+                };
+
+                $scope.cancel = function(e) {
+                    if (e.keyCode === 13) { e.preventDefault(); return false; }
+                    modal.reject();
+                };
+
+
+                $scope.submit = function(id) {
+                    if (id)
+                        $scope.selectedId = id;
+                    modal.resolve($scope.selectedId);
+                };
+            }]);
+
+    module.controller('stdRecordPickerEditController',
+        ['$scope', '$element', '$timeout', 'stdModal',
+            function ($scope, $element, $timeout, modal) {
+                var self = this;
+
+                self.init = function () {
+                    $scope.data = { displayValue: 'Loading...' };
+                    $scope.data.show = false;
+                    if ($scope.field.value.$) {
+                        $scope.field.queryByRef($scope.field.value.$).then(function(results) {
+                            $scope.data.displayValue = results.label;
+                            $scope.data.show = true;
+                        });
+                    } else {
+                        $scope.data.displayValue = '';
+                    }
+                };
+
+                self.focusElement = function () {
+                    $timeout(function () {
+                        $element[0].querySelectorAll('button')[0].focus();
+                    });
+                };
+
+
+                $scope.showRecordPickerModal = function () {
+                    var promise = modal.open(
+                        'recordPicker'
+                    );
+                    promise.then(
+                        function handleResolve(response) {
+                            $scope.field.value.$ = response;
+                            self.focusElement();
+                        },
+                        function handleReject(error) {
+                            self.focusElement();
+                        }
+                    );
+                };
+
+                $scope.$watch('field.value.$', function () { self.init(); });
+            }]);
+
+    module.directive('stdRecordPickerEdit',
+        ['$templateCache', '$timeout', 'stdDisplay',
+            function ($templateCache, $timeout, display) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    controller: 'stdRecordPickerEditController',
+                    template: $templateCache.get('src/templates/edit/std-record-picker-edit.html'),
+                    link: function (scope, element) {
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -967,8 +1206,8 @@ var app = angular.module('tru.type.lib',
      * `<a href="" ng-click="list.addItem()">Add Item</a>`
      */
     module.directive('stdTextboxEdit',
-        ['$templateCache', 'stdDisplay',
-            function($templateCache, display) {
+        ['$templateCache', '$timeout', 'stdDisplay',
+            function($templateCache, $timeout, display) {
                 return {
                     restrict: 'E',
                     scope: {
@@ -982,14 +1221,20 @@ var app = angular.module('tru.type.lib',
 
                         angular.element(input).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
-                            if (!scope.field.isListContext)
-                                input.select();
+                            if (!scope.field.isListContext) {
+                                $timeout(function() {
+                                    input.select();
+                                });
+                            }
                         });
 
                         angular.element(input).bind('keydown', function (e) {
                             if (e.keyCode === 27) {
                                 scope.field.value.$ = oldValue;
                                 input.blur();
+                            }
+                            if (e.keyCode === 46) {
+                                scope.field.value.$ = null;
                             }
                         });
 
@@ -2744,7 +2989,7 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.controlValueIsUndefined = function () {
-                return (typeof $scope.field === 'undefined') || (typeof $scope.field.value.$ === 'undefined');
+                return (typeof $scope.field === 'undefined') || (typeof $scope.field.value.$ === 'undefined' || $scope.field.value.$ === '');
             };
 
             $scope.onOperatorClick = function() {
@@ -3682,13 +3927,14 @@ var app = angular.module('tru.type.lib',
                         }
 
                         element.bind('keydown', function (e) {
-                            if (!focusedValue)
+                            if (!focusedValue && focusedValue !== null)
                                 focusedValue = scope.field.value.$;
 
                             if (e.keyCode === 27) {
-                                ngModelCtrl.$setValidity('invalid-date', true);
-                                ngModelCtrl.$setViewValue($filter('date')(new Date(focusedValue), 'MM/dd/yyyy hh:mm a'));
-                                ngModelCtrl.$render();
+                                scope.field.value.$ = focusedValue;
+                                //ngModelCtrl.$setValidity('invalid-date', true);
+                                //ngModelCtrl.$setViewValue($filter('date')(new Date(focusedValue), 'MM/dd/yyyy hh:mm a'));
+                                //ngModelCtrl.$render();
                                 e.preventDefault();
                                 return;
                             }
@@ -4086,7 +4332,7 @@ var app = angular.module('tru.type.lib',
                         });
 
                         element.bind('focus', function (e) {
-                            if (!focusedValue)
+                            if (!focusedValue && focusedValue !== null)
                                 focusedValue = scope.field.value.$;
 
                             $timeout(function () {
@@ -4127,6 +4373,7 @@ var app = angular.module('tru.type.lib',
                         element.addClass('ttl-date-selection');
 
                         ngModelCtrl.$formatters.push(function (val) {
+                            focusedValue = val;
                             ngModelCtrl.$setValidity('invalid-date', true);
                             var date = Date.parse(val);
                             if (!isNaN(date)) {
@@ -4658,12 +4905,6 @@ var app = angular.module('tru.type.lib',
                         stdGridFocus: '='
                     },
                     link: function (scope, element, attrs) {
-                        //scope.$watch('stdGridFocus', function(newValue) {
-                        //    if (newValue) {
-                        //        element[0].querySelectorAll('.ui-grid-viewport')[0].focus();
-                        //    }
-                        //});
-
                         document.addEventListener('focus', function (e) {
                             scope.stdGridFocus = isDescendant(element[0], e.target) || e.target.tagName.toLowerCase() === 'body';
                         }, true);
@@ -4754,6 +4995,7 @@ var app = angular.module('tru.type.lib',
                         var isNullable = scope.stdIntegerOnly.type.isNullable;
                         var isEditContext = scope.stdIntegerOnly.isEditContext;
                         var isSearchContext = scope.stdIntegerOnly.isSearchContext;
+                        var isListContext = scope.stdIntegerOnly.isListContext;
                         var maxValue = scope.stdIntegerOnly.type.property.maximumValue;
                         var minValue = scope.stdIntegerOnly.type.property.minimumValue;
                         maxValue = typeof maxValue === 'undefined' ? 2147483647 : maxValue;
@@ -4794,14 +5036,14 @@ var app = angular.module('tru.type.lib',
                             //clean === '' because isNaN return false for empty string.
                             if (clean === '' && isSearchContext) {
                                 return undefined;
-                            } else if (clean === '' && isEditContext) {
+                            } else if (clean === '' && (isEditContext || isListContext)) {
                                 return null;
                             } else if (isNaN(clean) && isSearchContext) {
                                 if (isNullable)
                                     return null;
                                 else
                                     return undefined;
-                            } else if (isNaN(clean) && isEditContext) {
+                            } else if (isNaN(clean) && (isEditContext || isListContext)) {
                                 return null;
                             } else
                                 return parseInt(clean);
@@ -5381,6 +5623,44 @@ var app = angular.module('tru.type.lib',
                 };
             }]);
 })();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.modals', []);
+
+    module.directive('stdModals',
+        ['$rootScope', 'stdModal',
+            function($rootScope, modal) {
+                return {
+                    link: function (scope, element, attrs) {
+                        scope.subview = null;
+
+                        element.on(
+                            "click",
+                            function handleClickEvent(event) {
+                                if (element[0] !== event.target) return;
+                                scope.$apply(modal.reject);
+                            }
+                        );
+
+                        $rootScope.$on(
+                            "modal.open",
+                            function handleModalOpenEvent(event, modalType) {
+                                scope.subview = modalType;
+                            }
+                        );
+
+                        $rootScope.$on(
+                            "modal.close",
+                            function handleModalCloseEvent(event) {
+                                scope.subview = null;
+                            }
+                        );
+                    }
+                };
+            }
+        ]);
+})();
 (function () {
     'use strict';
 
@@ -5524,6 +5804,37 @@ var app = angular.module('tru.type.lib',
                                 event.preventDefault();
                             }
                         });
+                    }
+                };
+            }]);
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.search.focus', []);
+
+    module.directive('stdSearchFocus',
+        ['$document',
+            function ($document) {
+                return {
+                    scope: {
+                        stdSearchFocus: '='
+                    },
+                    link: function (scope, element, attrs) {
+                        document.addEventListener('focus', function (e) {
+                            scope.stdSearchFocus(isDescendant(element[0], e.target) || e.target.tagName.toLowerCase() === 'body');
+                        }, true);
+
+                        function isDescendant(parent, child) {
+                            var node = child.parentNode;
+                            while (node != null) {
+                                if (node == parent) {
+                                    return true;
+                                }
+                                node = node.parentNode;
+                            }
+                            return false;
+                        }
                     }
                 };
             }]);
@@ -5913,6 +6224,44 @@ var app = angular.module('tru.type.lib',
 (function () {
     'use strict';
 
+    var module = angular.module('std.trap.focus', []);
+
+    module.directive('stdTrapFocus',
+        ['$window', '$document', '$timeout',
+            function ($window, $document, $timeout) {
+                return {
+                    restrict: 'A',
+                    link: function (scope, element) {
+                        var keyCode, shiftKey;
+                        var focusListener = function (e) {
+                            if (!element[0].contains(e.target)) {
+                                var elements = element[0].querySelectorAll('input:not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not(:disabled)');
+                                if (shiftKey && keyCode === 9)
+                                    elements[elements.length - 1].focus();
+                                else
+                                    elements[0].focus();
+                            }
+                        };
+
+                        var keydownListener = function (e) {
+                            keyCode = e.keyCode;
+                            shiftKey = e.shiftKey;
+                        };
+
+                        $document[0].addEventListener('focus', focusListener, true);
+                        $document[0].addEventListener('keydown', keydownListener, true);
+
+                        scope.$on('$destroy', function() {
+                            $document[0].removeEventListener('focus', focusListener);
+                            $document[0].removeEventListener('keydown', keydownListener);
+                        });
+                    }
+                };
+            }]);
+})();
+(function () {
+    'use strict';
+
     var module = angular.module('std.usa.dollar', []);
 
     module.directive('stdUsaDollar',
@@ -6281,6 +6630,71 @@ var app = angular.module('tru.type.lib',
                         return '(invalid date)';
                     return $filter('date')(date, format);
                 };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.modal', []);
+
+    module.service('stdModal',
+        ['$rootScope', '$q',
+            function($rootScope, $q) {
+                var modal = {
+                    deferred: null,
+                    params: null
+                };
+
+                return({
+                    open: open,
+                    params: params,
+                    proceedTo: proceedTo,
+                    reject: reject,
+                    resolve: resolve
+                });
+
+                function open(type, params, pipeResponse) {
+                    var previousDeferred = modal.deferred;
+                    modal.deferred = $q.defer();
+                    modal.params = params;
+
+                    if (previousDeferred && pipeResponse) {
+                        modal.deferred.promise.then(previousDeferred.resolve, previousDeferred.reject);
+                    } else if (previousDeferred) {
+                        previousDeferred.reject();
+                    }
+
+                    $rootScope.$emit('modal.open', type);
+
+                    return(modal.deferred.promise);
+                }
+
+                function params() {
+                    return(modal.params || {});
+                }
+
+                function proceedTo(type, params) {
+                    return(open(type, params, true));
+                }
+
+                function reject(reason) {
+                    if (!modal.deferred) return;
+
+                    modal.deferred.reject(reason);
+                    modal.deferred = modal.params = null;
+
+                    $rootScope.$emit('modal.close');
+                }
+
+                function resolve(response) {
+                    if (!modal.deferred) return;
+
+                    modal.deferred.resolve(response);
+                    modal.deferred = modal.params = null;
+
+                    $rootScope.$emit('modal.close');
+                }
             }
         ]);
 })();
@@ -7044,6 +7458,8 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
   $templateCache.put('src/templates/edit/std-dropdown-edit.html',
     "<tru-label label=\"{{label}}\" field=\"field\">\r" +
     "\n" +
+    "    <div data-ng-show=\"!data.show\" style=\"position:relative;background-color:#fff;height:20px;width:100%;z-index:100;\"><p>Loading...</p></div>\r" +
+    "\n" +
     "    <select data-ng-model=\"data.value\"\r" +
     "\n" +
     "            data-ng-options=\"x.value.$ as x.label for x in choices\"\r" +
@@ -7052,9 +7468,11 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "            data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
     "\n" +
+    "            data-ng-show=\"data.show\"\r" +
+    "\n" +
     "            data-z-validate\r" +
     "\n" +
-    "            class=\"dropdown control\">\r" +
+    "            class=\"ttl-dropdown-edit dropdown control\">\r" +
     "\n" +
     "    </select>\r" +
     "\n" +
@@ -7081,7 +7499,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "       class=\"anchorElement download btn btn_textOnly\"\r" +
     "\n" +
-    "       style=\"font-size: 12px;vertical-align: middle;\">Download</a>\r" +
+    "       style=\"vertical-align: middle;\">Download</a>\r" +
     "\n" +
     "    <input data-ng-model=\"field.property.data\"\r" +
     "\n" +
@@ -7216,69 +7634,163 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
   $templateCache.put('src/templates/edit/std-password-edit.html',
     "<div class=\"ttl-password-edit-wrapper\">\r" +
     "\n" +
-    "    <div data-ng-class=\"{'ttl-password-edit-password-wrapper-not-editing': !field.editor.isEditing, 'ttl-password-edit-password-wrapper-editing': field.editor.isEditing}\" class=\"ttl-password-edit-password-wrapper\">\r" +
+    "    <div\r" +
     "\n" +
-    "            <tru-label label=\"{{label}}\">\r" +
+    "        std-modals\r" +
     "\n" +
-    "                <input data-ng-show=\"!field.editor.isEditing\"\r" +
+    "        ng-show=\"subview\"\r" +
     "\n" +
-    "                       placeholder=\"{{readOnlyPasswordPlaceHolder}}\"\r" +
+    "        class=\"ttl-modals\"\r" +
     "\n" +
-    "                       type=\"password\"\r" +
+    "        ng-switch=\"subview\">\r" +
     "\n" +
-    "                       readonly />\r" +
+    "        <div data-ng-controller=\"stdPasswordModalController\"\r" +
     "\n" +
-    "                <input data-ng-model=\"data.password\"\r" +
+    "            data-ng-switch-when=\"password\"\r" +
     "\n" +
-    "                       data-ng-show=\"field.editor.isEditing\"\r" +
+    "            data-tru-label-container\r" +
     "\n" +
-    "                       data-ng-trim=\"false\"\r" +
+    "            class=\"ttl-modal\">\r" +
     "\n" +
-    "                       data-ng-mouseenter=\"mouseEnter()\"\r" +
+    "            <h4 style=\"margin: 0 0;\">\r" +
     "\n" +
-    "                       data-ng-mouseleave=\"mouseLeave()\"\r" +
+    "                {{setOrChange}} Password\r" +
     "\n" +
-    "                       data-ng-class=\"{'ttl-invalid-input': invalid}\"\r" +
+    "            </h4>\r" +
     "\n" +
-    "                       data-ng-change=\"onChange()\"\r" +
+    "            <p>\r" +
     "\n" +
-    "                       placeholder=\"{{passwordPlaceHolder}}\"\r" +
+    "                <tru-label label=\"Password\">\r" +
     "\n" +
-    "                       type=\"password\" />\r" +
+    "                    <input type=\"password\"\r" +
     "\n" +
-    "            <span class=\"ttl-invalid-indicator\" data-ng-show=\"field.editor.isEditing && invalid && mouseOver\">\r" +
+    "                           data-ng-model=\"data.password\"\r" +
     "\n" +
-    "                <i class=\"icon-warning-sign icon-white\"></i>{{invalidMessage}}\r" +
+    "                           data-ng-change=\"onPasswordChange()\"\r" +
     "\n" +
-    "            </span>\r" +
+    "                           data-ng-mouseenter=\"onPasswordMouseEnter()\"\r" +
     "\n" +
-    "        </tru-label>\r" +
+    "                           data-ng-mouseleave=\"onPasswordMouseLeave()\"\r" +
+    "\n" +
+    "                           data-ng-keydown=\"onPasswordKeyDown($event)\"\r" +
+    "\n" +
+    "                           data-ng-class=\"{'ttl-invalid-input': errorMessage ? true : false}\"\r" +
+    "\n" +
+    "                           data-ng-focus=\"passwordIsFocused = true\"\r" +
+    "\n" +
+    "                           data-ng-blur=\"passwordIsFocused = false\"\r" +
+    "\n" +
+    "                    />\r" +
+    "\n" +
+    "                    <span class=\"ttl-invalid-indicator\" data-ng-show=\"field.editor.isEditing && errorMessage && mouseOverPassword && passwordIsFocused\">\r" +
+    "\n" +
+    "                        <i class=\"icon-warning-sign icon-white\"></i>{{errorMessage}}\r" +
+    "\n" +
+    "                    </span>\r" +
+    "\n" +
+    "                </tru-label>\r" +
+    "\n" +
+    "            </p>\r" +
+    "\n" +
+    "            <p>\r" +
+    "\n" +
+    "                <tru-label label=\"Confirm Password\">\r" +
+    "\n" +
+    "                    <input type=\"password\"\r" +
+    "\n" +
+    "                           data-ng-model=\"data.confirmPassword\"\r" +
+    "\n" +
+    "                           data-ng-change=\"onConfirmPasswordChange()\"\r" +
+    "\n" +
+    "                           data-ng-mouseenter=\"onConfirmPasswordMouseEnter()\"\r" +
+    "\n" +
+    "                           data-ng-mouseleave=\"onConfirmPasswordMouseLeave()\"\r" +
+    "\n" +
+    "                           data-ng-class=\"{'ttl-invalid-input': confirmErrorMessage ? true : false}\"\r" +
+    "\n" +
+    "                           data-ng-focus=\"confirmPasswordIsFocused = true\"\r" +
+    "\n" +
+    "                           data-ng-blur=\"confirmPasswordIsFocused = false\"\r" +
+    "\n" +
+    "                    />\r" +
+    "\n" +
+    "                    <span class=\"ttl-invalid-indicator\" data-ng-show=\"field.editor.isEditing && confirmErrorMessage && mouseOverConfirmPassword && confirmPasswordIsFocused\">\r" +
+    "\n" +
+    "                        <i class=\"icon-warning-sign icon-white\"></i>{{confirmErrorMessage}}\r" +
+    "\n" +
+    "                    </span>\r" +
+    "\n" +
+    "                </tru-label>\r" +
+    "\n" +
+    "            </p>\r" +
+    "\n" +
+    "            <p style=\"float:left;\" data-ng-if=\"field.value.$ && field.type.isNullable\">\r" +
+    "\n" +
+    "                <button data-ng-click=\"onClearClick()\"\r" +
+    "\n" +
+    "                        class=\"tvl-btn\">Clear\r" +
+    "\n" +
+    "                </button>\r" +
+    "\n" +
+    "            </p>\r" +
+    "\n" +
+    "            <p style=\"float:right;\">\r" +
+    "\n" +
+    "                <button data-ng-click=\"onOkClick()\"\r" +
+    "\n" +
+    "                        data-ng-keydown=\"onOkKeyDown($event)\"\r" +
+    "\n" +
+    "                        data-ng-class=\"{'tvl-btn-primary': formIsValid}\"\r" +
+    "\n" +
+    "                        data-ng-disabled=\"!formIsValid\"\r" +
+    "\n" +
+    "                        class=\"tvl-btn\">OK\r" +
+    "\n" +
+    "                </button>\r" +
+    "\n" +
+    "                <button data-ng-click=\"onCancelClick()\"\r" +
+    "\n" +
+    "                        data-ng-keydown=\"onCancelKeyDown($event)\"\r" +
+    "\n" +
+    "                        class=\"tvl-btn\"\r" +
+    "\n" +
+    "                        >Cancel\r" +
+    "\n" +
+    "                </button>\r" +
+    "\n" +
+    "            </p>\r" +
+    "\n" +
+    "        </div>\r" +
     "\n" +
     "    </div>\r" +
     "\n" +
-    "    <div data-ng-class=\"{'ttl-password-edit-password-confirm-wrapper-not-editing': !field.editor.isEditing}\" class=\"ttl-password-edit-password-confirm-wrapper\">\r" +
+    "    <tru-label label=\"{{label}}\">\r" +
     "\n" +
-    "        <tru-label label=\"Confirm {{label}}\" data-ng-if=\"field.editor.isEditing\">\r" +
+    "        <button data-ng-click=\"onPasswordButtonClick()\"\r" +
     "\n" +
-    "            <input data-ng-model=\"data.confirmPassword\"\r" +
+    "                data-ng-keydown=\"onPasswordButtonKeyDown($event)\"\r" +
     "\n" +
-    "                   data-ng-trim=\"false\"\r" +
+    "                data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
     "\n" +
-    "                   data-ng-mouseenter=\"mouseEnter()\"\r" +
+    "                data-ng-class=\"{'ttl-invalid-button': field.getValidationErrors().length > 0}\"\r" +
     "\n" +
-    "                   data-ng-mouseleave=\"mouseLeave()\"\r" +
+    "                data-ng-mouseenter=\"onMouseEnterPasswordButton()\"\r" +
     "\n" +
-    "                   data-ng-class=\"{'ttl-invalid-input': invalid}\"\r" +
+    "                data-ng-mouseleave=\"onMouseLeavePasswordButton()\"\r" +
     "\n" +
-    "                   data-ng-change=\"onConfirmChange()\"\r" +
+    "                class=\"tvl-btn\"\r" +
     "\n" +
-    "                   placeholder=\"Confirm Password\"\r" +
+    "                >{{setOrChange}} Password...\r" +
     "\n" +
-    "                   type=\"password\" />\r" +
+    "        </button>\r" +
     "\n" +
-    "        </tru-label>\r" +
+    "        <span class=\"ttl-invalid-indicator\" data-ng-show=\"field.editor.isEditing && field.getValidationErrors().length > 0 && mouseOverPasswordButton\">\r" +
     "\n" +
-    "    </div>\r" +
+    "            <i class=\"icon-warning-sign icon-white\"></i>Password is required.\r" +
+    "\n" +
+    "        </span>\r" +
+    "\n" +
+    "    </tru-label>\r" +
     "\n" +
     "</div>"
   );
@@ -7302,6 +7814,119 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "            />\r" +
     "\n" +
     "</tru-label>"
+  );
+
+
+  $templateCache.put('src/templates/edit/std-record-picker-edit.html',
+    "<div class=\"ttl-password-edit-wrapper\">\r" +
+    "\n" +
+    "    <div\r" +
+    "\n" +
+    "            std-modals\r" +
+    "\n" +
+    "            ng-show=\"subview\"\r" +
+    "\n" +
+    "            class=\"ttl-modals\"\r" +
+    "\n" +
+    "            ng-switch=\"subview\">\r" +
+    "\n" +
+    "        <div data-ng-controller=\"stdRecordPickerModalController\"\r" +
+    "\n" +
+    "             data-ng-switch-when=\"recordPicker\"\r" +
+    "\n" +
+    "             data-tru-label-container\r" +
+    "\n" +
+    "             data-std-trap-focus\r" +
+    "\n" +
+    "             class=\"ttl-modal\" style=\"width:700px;\">\r" +
+    "\n" +
+    "            <h4 style=\"margin: 0 0;\">\r" +
+    "\n" +
+    "                Record Picker\r" +
+    "\n" +
+    "            </h4>\r" +
+    "\n" +
+    "            <p style=\"float:right;clear:both;\">\r" +
+    "\n" +
+    "                <div std-picker-view></div>\r" +
+    "\n" +
+    "            </p>\r" +
+    "\n" +
+    "            <p style=\"float:left;\" data-ng-show=\"field.value.$ && field.type.isNullable\">\r" +
+    "\n" +
+    "                <button data-ng-click=\"clear()\"\r" +
+    "\n" +
+    "                        type=\"button\"\r" +
+    "\n" +
+    "                        class=\"tvl-btn\">Clear\r" +
+    "\n" +
+    "                </button>\r" +
+    "\n" +
+    "            </p>\r" +
+    "\n" +
+    "            <p style=\"float:right;clear:both;\">\r" +
+    "\n" +
+    "                <button data-ng-click=\"submit()\"\r" +
+    "\n" +
+    "                        data-ng-keydown=\"submitByEnter($event)\"\r" +
+    "\n" +
+    "                        data-ng-disabled=\"!selectedId\"\r" +
+    "\n" +
+    "                        data-ng-class=\"{'tvl-btn-primary': selectedId && !searchIsFocused}\"\r" +
+    "\n" +
+    "                        type=\"button\"\r" +
+    "\n" +
+    "                        class=\"tvl-btn\">OK\r" +
+    "\n" +
+    "                </button>\r" +
+    "\n" +
+    "                <button data-ng-click=\"cancel($event)\"\r" +
+    "\n" +
+    "                        type=\"button\"\r" +
+    "\n" +
+    "                        class=\"tvl-btn\"\r" +
+    "\n" +
+    "                        >Cancel\r" +
+    "\n" +
+    "                </button>\r" +
+    "\n" +
+    "            </p>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <tru-label label=\"{{label}}\">\r" +
+    "\n" +
+    "        <div class=\"ttl-record-picker-wrapper\">\r" +
+    "\n" +
+    "            <input data-ng-model=\"data.displayValue\"\r" +
+    "\n" +
+    "                   data-z-validate\r" +
+    "\n" +
+    "                   disabled=\"disabled\"\r" +
+    "\n" +
+    "                   type=\"text\"\r" +
+    "\n" +
+    "                    style=\"float:left;width:auto\"/>\r" +
+    "\n" +
+    "            <button data-ng-click=\"showRecordPickerModal()\"\r" +
+    "\n" +
+    "                    data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "\n" +
+    "                    class=\"tvl-btn\"\r" +
+    "\n" +
+    "                    style=\"float:left;height:20px;\"\r" +
+    "\n" +
+    "                    >...\r" +
+    "\n" +
+    "            </button>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </tru-label>\r" +
+    "\n" +
+    "</div>"
   );
 
 
@@ -7480,27 +8105,21 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
 
 
   $templateCache.put('src/templates/list/std-checkbox-list.html',
-    "<div>\r" +
+    "<div tabindex=\"-1\">\r" +
     "\n" +
-    "    <div class=\"ttl-checkbox-list-wrapper\">\r" +
+    "    <div class=\"ttl-checkbox-list-wrapper\" tabindex=\"-1\">\r" +
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "        data-std-indeterminate=\"field.type.isNullable\"\r" +
+    "            data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
     "\n" +
-    "        readonly=\"readonly\"\r" +
+    "            data-std-indeterminate=\"field.type.isNullable\"\r" +
     "\n" +
-    "        onfocus=\"this.blur();\"\r" +
+    "            tabindex=\"-1\"\r" +
     "\n" +
-    "        onkeydown=\"return false\"\r" +
+    "            class=\"ttl-checkbox-list\"\r" +
     "\n" +
-    "        onclick=\"this.checked=!this.checked;\"\r" +
-    "\n" +
-    "        tabindex=\"-1\"\r" +
-    "\n" +
-    "        class=\"ttl-checkbox-list\"\r" +
-    "\n" +
-    "        type=\"checkbox\"/>\r" +
+    "            type=\"checkbox\"/>\r" +
     "\n" +
     "    </div>\r" +
     "\n" +
@@ -7892,7 +8511,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                std-select-value-converter\r" +
     "\n" +
-    "                class=\"dropdown control\"\r" +
+    "                class=\"ttl-dropdown-edit dropdown control\"\r" +
     "\n" +
     "                >\r" +
     "\n" +

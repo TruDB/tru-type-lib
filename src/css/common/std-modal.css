@@ -1,0 +1,44 @@
+/* ---------------------------------------------------------------------
+Modal - Styles
+------------------------------------------------------------------------ */
+
+div.ttl-modals {
+    background-color: rgba( 0, 0, 0, 0.8 ) ;
+    bottom: 0px;
+    left: 0px;
+    position: fixed;
+    right: 0px;
+    top: 0px;
+    z-index: 10000000;
+}
+
+div.ttl-modals.ng-hide {
+    background-color: rgba( 0, 0, 0, 0 );
+}
+
+div.ttl-modals.ng-hide-add.ng-hide-add-active,
+div.ttl-modals.ng-hide-remove.ng-hide-remove-active {
+    transition: 250ms ease all;
+}
+
+div.ttl-modals > .ttl-modal {
+    background-color: #fff;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    padding: 10px;
+    position: fixed;
+    left: 50%;
+    margin-left: -350px;
+    top: 200px;
+    width: 400px;
+    z-index: 10000001;
+}
+
+div.ttl-modals.ng-hide > .ttl-modal.ng-enter {
+    top: -200px;
+    transition: 250ms ease top;
+}
+
+div.ttl-modals.ng-hide > .ttl-modal.ng-enter.ng-enter-active {
+    top: 200px;
+}

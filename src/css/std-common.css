@@ -38,11 +38,23 @@ std-common - styles
 }
 
 input[type="password"].ttl-invalid-input  {
-    border: 1px solid red;
+    border: 1px solid red !important;
 }
 
 input[type="password"]:focus .ttl-invalid-input  {
+    border: 1px solid red !important;
+}
+
+button.ttl-invalid-button  {
     border: 1px solid red;
+}
+
+button:active .ttl-invalid-button  {
+    border: 1px solid red !important;
+}
+
+button:focus .ttl-invalid-button  {
+    border: 1px solid red !important;
 }
 
 .ttl-operator-icon-wrapper {

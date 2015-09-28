@@ -12,20 +12,31 @@
                         field: '=',
                         label: '@'
                     },
-                    template: function(element) {
+                    template: function (element) {
                         if (util.getClosestParentByClass(element[0], '.ui-grid-render-container')) {
                             return $templateCache.get('src/templates/list/std-checkbox-list-edit.html');
                         }
                         return $templateCache.get('src/templates/edit/std-checkbox-edit.html');
                     },
                     link: function (scope, element) {
+                        var ctrlDefault = scope.field.property.default;
+                        var isNullable = scope.field.type.isNullable;
+
                         var oldValue;
                         var input = element[0].querySelectorAll('input')[0];
 
                         angular.element(input).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
-                            if (!scope.field.isListContext)
+                            if (!scope.field.isListContext) {
                                 input.select();
+                            }
+
+                            if (scope.field.isListContext) {
+                                scope.$apply(function () {
+                                    scope.field.value.$ = !scope.field.value.$;
+                                });
+                            }
+
                         });
 
                         angular.element(input).bind('keydown', function (e) {
@@ -34,6 +45,10 @@
                                 input.blur();
                             }
                         });
+
+                        if (scope.field.value.$ === null && !isNullable && !ctrlDefault) {
+                            scope.field.value.$ = false;
+                        }
 
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }

@@ -118,13 +118,14 @@
                         }
 
                         element.bind('keydown', function (e) {
-                            if (!focusedValue)
+                            if (!focusedValue && focusedValue !== null)
                                 focusedValue = scope.field.value.$;
 
                             if (e.keyCode === 27) {
-                                ngModelCtrl.$setValidity('invalid-date', true);
-                                ngModelCtrl.$setViewValue($filter('date')(new Date(focusedValue), 'MM/dd/yyyy hh:mm a'));
-                                ngModelCtrl.$render();
+                                scope.field.value.$ = focusedValue;
+                                //ngModelCtrl.$setValidity('invalid-date', true);
+                                //ngModelCtrl.$setViewValue($filter('date')(new Date(focusedValue), 'MM/dd/yyyy hh:mm a'));
+                                //ngModelCtrl.$render();
                                 e.preventDefault();
                                 return;
                             }
@@ -522,7 +523,7 @@
                         });
 
                         element.bind('focus', function (e) {
-                            if (!focusedValue)
+                            if (!focusedValue && focusedValue !== null)
                                 focusedValue = scope.field.value.$;
 
                             $timeout(function () {
@@ -563,6 +564,7 @@
                         element.addClass('ttl-date-selection');
 
                         ngModelCtrl.$formatters.push(function (val) {
+                            focusedValue = val;
                             ngModelCtrl.$setValidity('invalid-date', true);
                             var date = Date.parse(val);
                             if (!isNaN(date)) {
