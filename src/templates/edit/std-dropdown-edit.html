@@ -3,7 +3,7 @@
     <select data-ng-model="data.value"
             data-ng-options="x.value.$ as x.label for x in choices"
             data-ng-change="onChange()"
-            data-ng-disabled="!field.editor.isEditing || !field.type.canEdit"
+            data-ng-disabled="!field.context.isEditing || !field.type.canEdit"
             data-ng-show="data.show"
             data-z-validate
             class="ttl-dropdown-edit dropdown control">

@@ -10,11 +10,13 @@
             var ctrlValueHasValue = ctrlValue.length > 0;
             var ctrlDefaultHasValue = ctrlDefault.length > 0;
             var operator = operatorLookup[$scope.field.property.operator].operator;
+            var unregOnChoicesChange = undefined;
 
             var onClearCB = function(){
                 return function() {
                     if (ctrlValueHasValue) return;
                     angular.forEach($scope.data.choices, function (choice) { choice.checked = false; });
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -27,29 +29,29 @@
                         });
                     else
                         angular.forEach($scope.data.choices, function (choice) { choice.checked = false; });
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function () {
-                return function () {
-                    var queryPredicate = $scope.field.queryPredicate;
-                    var predicates = [];
+            $scope.updateQueryPredicate = function() {
+                var queryPredicate = $scope.field.queryPredicate;
+                var predicates = [];
 
-                    angular.forEach($scope.data.choices, function (choice) {
-                        if (choice.checked)
-                            predicates.push(queryPredicate.create('', operator, choice.value.$));
-                    });
+                angular.forEach($scope.data.choices, function (choice) {
+                    if (choice.checked)
+                        predicates.push(queryPredicate.create('', operator, choice.value.$));
+                });
 
-                    if (predicates.length) {
-                        var predicate = predicates[0];
-                        for (var i = 1; i < predicates.length; i++) {
-                            predicate = predicate.or(predicates[i]);
-                        }
-                        queryPredicate.set(predicate);
-                    } else
-                        queryPredicate.clear();
-                }
-            }();
+                if (predicates.length) {
+                    var predicate = predicates[0];
+                    for (var i = 1; i < predicates.length; i++) {
+                        predicate = predicate.or(predicates[i]);
+                    }
+                    queryPredicate.set(predicate);
+                } else
+                    queryPredicate.clear();
+            };
 
             $scope.data = { choices: [], labels: [] };
 
@@ -61,12 +63,14 @@
             };
 
             $scope.onOperatorClick = function () {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 if ($scope.checked) {
                     angular.forEach($scope.data.choices, function (choice) {
                         choice.checked = false;
                     });
                 }
+
+                $scope.updateQueryPredicate();
             };
 
             $scope.$watch('data.choices', function () {
@@ -75,8 +79,8 @@
                 }).length > 0;
             }, true);
 
-            $scope.field.queryChoices($scope).then(function (results) {
-                angular.forEach(results, function (choice) {
+            var loadChoices = function(choices) {
+                angular.forEach(choices, function (choice) {
                     if (ctrlValueHasValue) {
                         if (ctrlValue.indexOf(choice.value.$) !== -1) {
                             $scope.data.labels.push(choice.label);
@@ -88,6 +92,7 @@
                         choice["checked"] = false;
                     }
                     $scope.data.choices.push(choice);
+                    $scope.updateQueryPredicate();
                 });
 
                 if ($scope.field.type.isNullable) {
@@ -97,12 +102,19 @@
                         value: { $: null }
                     })
                 }
+
+                $scope.updateQueryPredicate();
+            };
+
+            unregOnChoicesChange = $scope.field.onChoicesChanged(loadChoices);
+
+            $scope.$on("$destroy", function () {
+                unregOnChoicesChange();
             });
 
             $scope.init = function () {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 

@@ -26,6 +26,8 @@
 
                     if (!ctrlEndValueHasValue)
                         $scope.data.endDate = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -44,34 +46,34 @@
                         else
                             $scope.data.endDate = undefined;
                     }
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function () {
-                    var queryPredicate = $scope.field.queryPredicate;
-                    var predicates = [];
+            $scope.updateQueryPredicate = function() {
+                var queryPredicate = $scope.field.queryPredicate;
+                var predicates = [];
 
-                    if ($scope.data.startDate) {
-                        var startValue = new Date($scope.data.startDate.toUTCString());
-                        startValue.setHours(0,0,0,0);
-                        predicates.push(queryPredicate.create('', startOperator, startValue));
-                    }
-
-                    if ($scope.data.endDate) {
-                        var endValue = new Date($scope.data.endDate.toUTCString());
-                        endValue.setHours(23,59,59,999);
-                        predicates.push(queryPredicate.create('', endOperator, endValue));
-                    }
-                    if (predicates.length) {
-                        var predicate = predicates[0];
-                        if (predicates.length > 1)
-                            predicate = predicate.and(predicates[1]);
-                        queryPredicate.set(predicate);
-                    } else
-                        queryPredicate.clear();
+                if ($scope.data.startDate) {
+                    var startValue = new Date($scope.data.startDate.toUTCString());
+                    startValue.setHours(0,0,0,0);
+                    predicates.push(queryPredicate.create('', startOperator, startValue));
                 }
-            }();
+
+                if ($scope.data.endDate) {
+                    var endValue = new Date($scope.data.endDate.toUTCString());
+                    endValue.setHours(23,59,59,999);
+                    predicates.push(queryPredicate.create('', endOperator, endValue));
+                }
+                if (predicates.length) {
+                    var predicate = predicates[0];
+                    if (predicates.length > 1)
+                        predicate = predicate.and(predicates[1]);
+                    queryPredicate.set(predicate);
+                } else
+                    queryPredicate.clear();
+            };
 
             $scope.data = {
                 startDate: undefined,
@@ -84,13 +86,15 @@
             $scope.endOperatorImageMessage = operatorLookup[endDateInclusive].operatorImageMessage;
 
             $scope.onStartOperatorClick = function() {
-                if (ctrlStartValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlStartValueHasValue || $scope.field.context.isEditing) return;
                 $scope.data.startDate = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.onEndOperatorClick = function() {
-                if (ctrlEndValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlEndValueHasValue || $scope.field.context.isEditing) return;
                 $scope.data.endDate = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.init = function() {
@@ -105,7 +109,6 @@
 
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 

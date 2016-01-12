@@ -2,7 +2,7 @@
     <div class="ttl-datetime-wrapper">
         <div>
             <input data-ng-model="field.value.$"
-                   data-ng-disabled="!field.editor.isEditing || !field.type.canEdit"
+                   data-ng-disabled="!field.context.isEditing || !field.type.canEdit"
                    data-ng-trim="false"
                    data-std-datetime="field" is-nullable="field.type.isNullable"
                    data-std-calendar display="show"
@@ -11,7 +11,7 @@
                    style="float:left;width:140px;"/>
         </div>
         <button data-ng-click="show = !show"
-                data-ng-disabled="!field.editor.isEditing || !field.type.canEdit"
+                data-ng-disabled="!field.context.isEditing || !field.type.canEdit"
                 class="ttl-date-button"
                 tabindex="-1"
                 style="float:left"><i class="ttl-date-button-icon ico-calendar"></i>

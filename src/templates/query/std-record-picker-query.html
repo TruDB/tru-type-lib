@@ -55,22 +55,29 @@
         </div>
     </div>
     <tru-label field="field" label="{{label}}">
-        <div class="ttl-record-picker-wrapper" data-ng-if="!field.context.isGrid">
+        <div class="ttl-record-picker-query-wrapper">
+            <div style="float:left;height: 20px;width:19px;background-color:#fff;">
+                <div data-ng-class="{'ttl-operator-icon-has-value': !controlValueIsUndefined() || !valueIsUndefined()}" class="ttl-operator-icon-wrapper" title="{{operatorImageMessage}}">
+                    <i tabindex="-1" class="ttl-operator-icon" data-ng-class="operatorImage" data-ng-click="onOperatorClick()"></i>
+                </div>
+            </div>
             <div data-ng-mousedown="onInputMousedown()" style="float:left;width:auto;background-color:#fff;">
                 <input data-ng-model="data.displayValue"
-                       data-z-validate
+                       data-ng-if="valueIsUndefined()"
                        disabled="disabled"
                        type="text"
                        style="background-color:#fff;"/>
             </div>
             <button data-ng-click="onClick()"
                     data-ng-keydown="onKeydown($event)"
-                    data-ng-disabled="!field.context.isEditing || !field.type.canEdit || open"
+                    data-ng-disabled="field.context.isEditing || open"
+                    data-ng-if="valueIsUndefined()"
                     class="tvl-btn"
                     style="float:left;height:20px;width:25px;padding:0;position:relative;"
                     >...
                 <i style="color:green;margin-left:5px;margin-top:3px;position:absolute;z-index:5;top:0;left:-20px;" class="ttl-date-button-icon icon-arrow-right animated shake" data-ng-show="showArrow"></i>
             </button>
+            <p data-ng-if="!valueIsUndefined()">{{data.label}}</p>
         </div>
     </tru-label>
 </div>

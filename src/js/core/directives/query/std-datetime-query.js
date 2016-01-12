@@ -22,6 +22,7 @@
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -32,6 +33,8 @@
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -47,14 +50,16 @@
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
+
+            $scope.updateQueryPredicate();
 
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 

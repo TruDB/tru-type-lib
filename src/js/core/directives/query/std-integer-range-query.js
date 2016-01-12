@@ -29,27 +29,35 @@
             var startOperator = operatorLookup[startInclusive].operator;
             var endOperator = operatorLookup[endInclusive].operator;
 
-            var onPredicateCB = function () {
-                return function () {
-                    var queryPredicate = $scope.field.queryPredicate;
-                    var predicates = [];
+            $scope.updateQueryPredicate = function() {
+                var queryPredicate = $scope.field.queryPredicate;
+                var predicates = [];
 
-                    if ($scope.data.startValue) {
-                        predicates.push(queryPredicate.create('', startOperator, $scope.data.startValue));
-                    }
-
-                    if ($scope.data.endValue) {
-                        predicates.push(queryPredicate.create('', endOperator, $scope.data.endValue));
-                    }
-                    if (predicates.length) {
-                        var predicate = predicates[0];
-                        if (predicates.length > 1)
-                            predicate = predicate.and(predicates[1]);
-                        queryPredicate.set(predicate);
-                    } else
-                        queryPredicate.clear();
+                if ($scope.data.startValue) {
+                    predicates.push(queryPredicate.create('', startOperator, $scope.data.startValue));
                 }
-            }();
+
+                if ($scope.data.endValue) {
+                    predicates.push(queryPredicate.create('', endOperator, $scope.data.endValue));
+                }
+                if (predicates.length) {
+                    var predicate = predicates[0];
+                    if (predicates.length > 1)
+                        predicate = predicate.and(predicates[1]);
+                    queryPredicate.set(predicate);
+                } else
+                    queryPredicate.clear();
+            };
+
+            $scope.onStartOperatorClick = function() {
+                $scope.data.startValue = undefined;
+                $scope.updateQueryPredicate();
+            };
+
+            $scope.onEndOperatorClick = function() {
+                $scope.data.endValue = undefined;
+                $scope.updateQueryPredicate();
+            };
 
             $scope.data = {
                 startValue: undefined,
@@ -73,7 +81,6 @@
 
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 

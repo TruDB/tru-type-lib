@@ -6,7 +6,7 @@
         <ul class="hList tickGroup" data-ng-if="valueIsUndefined()">
             <li data-ng-repeat="choice in data.choices">
                 <label class="checkbox">
-                    <input class="ttl-or-list-checkbox" type="checkbox" data-ng-model="choice.checked" data-ng-disabled="field.editor.isEditing"/>{{choice.label}}
+                    <input class="ttl-or-list-checkbox" type="checkbox" data-ng-model="choice.checked" data-ng-disabled="field.context.isEditing" data-ng-change="updateQueryPredicate()"/>{{choice.label}}
                 </label>
             </li>
         </ul>

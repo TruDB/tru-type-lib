@@ -7,7 +7,7 @@
             <ul class="hList tickGroup">
                 <li data-ng-repeat="choice in data.choices">
                     <label class="checkbox">
-                        <input type="radio" name="$parent.label" data-ng-model="choice.checked" data-ng-value="true" data-ng-disabled="field.editor.isEditing"/>{{choice.label}}
+                        <input type="radio" name="$parent.label" data-ng-model="choice.checked" data-ng-value="true" data-ng-disabled="field.context.isEditing" data-ng-change="updateQueryPredicate()"/>{{choice.label}}
                     </label>
                 </li>
             </ul>

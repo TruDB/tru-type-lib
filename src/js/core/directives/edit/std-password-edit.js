@@ -9,12 +9,8 @@
                 var passwordInput, cancelButton;
 
                 $timeout(function () {
-                    var elements = $element[0].querySelectorAll('input,button');
-                    passwordInput = elements[0];
-                    cancelButton = elements[elements.length - 1];
-                    if (passwordInput) {
-                        passwordInput.focus();
-                    }
+                    var passwordInput = $element[0].querySelectorAll('input')[0];
+                    passwordInput.focus();
                 });
 
                 function documentKeyDownFn(e) {
@@ -59,23 +55,16 @@
                 $scope.mouseOverPassword = false;
                 $scope.mouseOverConfirmPassword = false;
 
+                $scope.cancel = function (e) {
+                    $timeout(function () { modal.reject() });
+                };
+
                 $scope.onOkKeyDown = function (e) {
                     if (e.keyCode === 13)
                         $scope.onOkClick();
                 };
 
-                $scope.onPasswordKeyDown = function (e) {
-                    if (e.keyCode === 9 && e.shiftKey) {
-                        e.preventDefault();
-                        cancelButton.focus();
-                    }
-                };
-
                 $scope.onCancelKeyDown = function (e) {
-                    if (e.keyCode === 9 && !e.shiftKey) {
-                        e.preventDefault();
-                        passwordInput.focus();
-                    }
                     if (e.keyCode === 13)
                         modal.reject();
                 };

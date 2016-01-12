@@ -22,6 +22,7 @@
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -32,16 +33,16 @@
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
-                }
-            }();
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
+            };
 
             $scope.valueIsUndefined = function () {
                 return (typeof ctrlValue === 'undefined');
@@ -52,8 +53,9 @@
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
@@ -62,7 +64,6 @@
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 

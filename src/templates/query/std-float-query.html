@@ -4,7 +4,8 @@
     </div>
     <div class="ttl-integer-query-wrapper">
         <input data-ng-model="field.value.$"
-               data-ng-disabled="field.editor.isEditing"
+               data-ng-change="updateQueryPredicate()"
+               data-ng-disabled="field.context.isEditing"
                data-ng-if="valueIsUndefined()"
                data-ng-trim="false"
                data-std-float="field.type.isNullable"

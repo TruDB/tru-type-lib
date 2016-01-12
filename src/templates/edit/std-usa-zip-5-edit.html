@@ -2,8 +2,10 @@
     <input data-ng-model="field.value.$"
            data-ng-disabled="!field.context.isEditing || !field.type.canEdit"
            data-ng-trim="false"
-           std-decimal="field"
+           data-std-integer-only="field"
            data-z-validate
+           maxlength="5"
+           placeholder="_____"
            type="text"
             />
 </tru-label>

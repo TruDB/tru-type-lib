@@ -10,14 +10,6 @@
                     link: function (scope, element, attrs) {
                         scope.subview = null;
 
-                        element.on(
-                            "click",
-                            function handleClickEvent(event) {
-                                if (element[0] !== event.target) return;
-                                scope.$apply(modal.reject);
-                            }
-                        );
-
                         $rootScope.$on(
                             "modal.open",
                             function handleModalOpenEvent(event, modalType) {

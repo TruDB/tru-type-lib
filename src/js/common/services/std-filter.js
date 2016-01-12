@@ -11,11 +11,12 @@
                  * @param {Date} date - Date object.
                  * @param {string} format - specifies the output format -- see angular's $filter('date').
                  */
+
                 this.formatDate = function (date, format) {
                     if (date === null)
                         return null;
                     if (isNaN(date.getTime()))
-                        return '(invalid date)';
+                        return '';
                     return $filter('date')(date, format);
                 };
             }

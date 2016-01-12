@@ -4,7 +4,8 @@
     </div>
     <div class="ttl-checkbox-query-wrapper">
         <input data-ng-model="field.value.$"
-               data-ng-disabled="field.editor.isEditing"
+               data-ng-change="updateQueryPredicate()"
+               data-ng-disabled="field.context.isEditing"
                data-std-indeterminate
                data-ng-if="valueIsUndefined()"
                type="checkbox"/>

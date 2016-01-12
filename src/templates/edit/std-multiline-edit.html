@@ -1,6 +1,6 @@
 <tru-label label="{{label}}" field="field">
     <textarea data-ng-model="field.value.$"
-              data-ng-disabled="!field.editor.isEditing || !field.type.canEdit"
+              data-ng-disabled="!field.context.isEditing || !field.type.canEdit"
               data-ng-trim="false"
               data-z-validate
               rows="{{field.property.rows}}"

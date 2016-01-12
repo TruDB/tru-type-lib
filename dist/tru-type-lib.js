@@ -21,6 +21,7 @@ var app = angular.module('tru.type.lib',
         'std.textbox.edit',
         'std.usa.address.edit',
         'std.usa.dollar.edit',
+        'std.usa.zip.5.edit',
         'std.record.picker.edit',
 
         //Search Controls
@@ -41,6 +42,7 @@ var app = angular.module('tru.type.lib',
         'std.usa.address.query',
         'std.usa.dollar.query',
         'std.boolean.dropdown.query',
+        'std.record.picker.query',
 
         //List Controls
         'std.checkbox.list',
@@ -53,6 +55,7 @@ var app = angular.module('tru.type.lib',
         'std.trap.focus',
         'std.grid.focus',
         'std.search.focus',
+        'std.resizable',
 
         //Services
         'std.date',
@@ -163,11 +166,11 @@ var app = angular.module('tru.type.lib',
 
                         angular.element(input).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
-                            if (!scope.field.isListContext) {
+                            if (!scope.field.context.isGrid) {
                                 input.select();
                             }
 
-                            if (scope.field.isListContext) {
+                            if (scope.field.context.isGrid) {
                                 scope.$apply(function () {
                                     scope.field.value.$ = !scope.field.value.$;
                                 });
@@ -389,44 +392,115 @@ var app = angular.module('tru.type.lib',
     module.controller('stdDropdownEditController', ['$scope', '$element', '$timeout',
         function ($scope, $element, $timeout) {
             var self = this;
+            self.unregOnChoicesChange = undefined;
+            self.select = $element[0].querySelectorAll('select')[0];
 
-            self.init = function () {
-                $scope.data = {};
-                $scope.data.show = false;
-                $scope.field.queryChoices($scope).then(function (results) {
-                    $scope.choices = [];
-                    angular.forEach(results, function (value, key) {
-                        $scope.choices.push(value);
-                    });
+            $scope.data = {};
 
-                    if ($scope.field.type.isNullable)
-                        $scope.choices.unshift({ label: ' ', value: { $: -1 } });
+            self.updateData = function() {
+                if ($scope.choices.length > 0) {
+
+                    if ($scope.field.type.isNullable) {
+                        var emptyItemExists = _.find($scope.choices, function (choice) { return choice.label === ' ' });
+                        if (!emptyItemExists)
+                            $scope.choices.unshift({ label: ' ', value: { $: -1 } });
+                    }
 
                     if ($scope.field.value.$)
                         $scope.data.value = $scope.field.value.$;
 
                     if ($scope.field.type.isNullable && !$scope.field.value.$)
                         $scope.data.value = $scope.choices[0].value.$;
+                }
 
-                    $scope.data.show = true;
+                $scope.data.show = true;
 
-                    if ($scope.field.isListContext) {
-                        $timeout(function() {
-                            var select = $element[0].querySelectorAll('select')[0];
-                            select.focus();
+                if ($scope.field.context.isGrid) {
+                    $timeout(function () {
+                        var select = $element[0].querySelectorAll('select')[0];
+                        select.focus();
+                    });
+                }
+            }
+
+            self.checkForInactiveValues = function(choices) {
+                var itemFound = _.find(choices, function (obj) { return obj.value.$ === $scope.field.value.$ });
+
+                if (!itemFound && $scope.field.value.$) {
+                    if ($scope.field.queryByRef) {
+                        $scope.field.queryByRef($scope.field.value.$).then(function (result) {
+                            if (result) {
+                                choices.push({
+                                    label: result.label,
+                                    value: {$: $scope.field.value.$},
+                                    notAnOption: true
+                                });
+                            }
+
+                            $scope.choices = choices;
+                            self.updateData();
+                            self.updateOptions();
                         });
                     }
-                });
+                } else {
+                    $scope.choices = choices;
+                    self.updateData();
+                    self.updateOptions();
+                }
+            }
+
+            self.loadChoices = function(choices) {
+                if (choices == null) {
+                    $scope.data.show = false;
+                } else {
+                    choices = choices.slice();
+                    self.checkForInactiveValues(choices);
+                }
             };
 
+            self.updateValue = function () {
+                $scope.data.value = undefined;
+                if ($scope.choices && $scope.choices.length) {
+                    $scope.choices = _.reject($scope.choices, function (choice) { return choice.notAnOption === true; });
+                    self.checkForInactiveValues($scope.choices);
+                }
+            };
+
+            self.updateOptions = function () {
+                $timeout(function() {
+                    var select = $element[0].querySelectorAll('select')[0];
+                    angular.element(select).removeClass('not-an-option');
+                    angular.forEach($scope.choices, function (choice, index) {
+                        var option = select.querySelectorAll('option:not([value="?"])')[index];
+                        angular.element(option).removeClass('not-an-option');
+                        if (choice.notAnOption) {
+                            angular.element(option).addClass('not-an-option');
+                            angular.element(select).addClass('not-an-option');
+                        } else {
+                            angular.element(option).addClass('an-option');
+                        }
+                    });
+                });
+
+            };
+
+            self.unregOnChoicesChange = $scope.field.onChoicesChanged(self.loadChoices);
+
             $scope.onChange = function () {
+
+                $scope.choices = _.reject($scope.choices, function (choice) { return choice.notAnOption === true; });
+
                 if ($scope.data.value === -1)
                     $scope.field.value.$ = null;
                 else
                     $scope.field.value.$ = $scope.data.value;
             };
 
-            $scope.$watch('field.value.$', function () { self.init(); });
+            $scope.$watch('field.value.$', function () { self.updateValue() });
+
+            $scope.$on("$destroy", function () {
+                self.unregOnChoicesChange();
+            });
         }]);
 
     module.directive('stdDropdownEdit',
@@ -448,7 +522,7 @@ var app = angular.module('tru.type.lib',
                             oldValue = scope.field.value.$;
 
                             //CHROME/SAFARI ONLY: Opens dropdown on focus 
-                            if (scope.field.isListContext) {
+                            if (scope.field.context.isGrid) {
                                 $timeout(function() {
                                     var event = document.createEvent('MouseEvents');
                                     event.initMouseEvent('mousedown', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
@@ -582,7 +656,7 @@ var app = angular.module('tru.type.lib',
                         iconName = 'ico-file';
                 }
 
-                var htmlIcon = '<i class="ttl-file-icon ' + iconName + '"></i>'
+                var htmlIcon = '<i class="ttl-file-icon ' + iconName + '"></i>';
                 self.renderElement.append(htmlIcon);
             };
 
@@ -638,12 +712,13 @@ var app = angular.module('tru.type.lib',
                 self.setType();
             };
 
-            self.getMimeTypes = function() {
-                $scope.field.children.mimeType.queryChoices($scope).then(function (results) {
-                    self.choices = results;
-                    self.init();
-                });
+            self.getMimeTypes = function(choices) {
+                if (!choices) return;
+                self.choices = choices;
+                self.init();
             };
+
+            self.unregOnChoicesChangeForMime = $scope.field.children.mimeType.onChoicesChanged(self.getMimeTypes);
 
             $scope.noDataMessage = undefined;
 
@@ -691,6 +766,10 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.$watch('field.value.data', function () { self.init(); });
+
+            $scope.$on("$destroy", function () {
+                self.unregOnChoicesChangeForMime();
+            });
         }]);
 
     module.directive('stdFileEdit',
@@ -787,6 +866,21 @@ var app = angular.module('tru.type.lib',
 
     var module = angular.module('std.masked.edit', []);
 
+    module.controller('stdMaskedEditController', ['$scope', '$element', '$timeout',
+        function ($scope, $element, $timeout) {
+            var self = this;
+
+            self.init = function () {
+                $scope.data = { value: $scope.field.value.$ };
+            };
+
+            $scope.onChange = function() {
+                $scope.field.value.$ = $scope.data.value;
+            };
+
+            $scope.$watch('field.value.$', function () { self.init(); });
+        }]);
+
     module.directive('stdMaskedEdit',
         ['$templateCache', 'stdDisplay',
             function($templateCache, display) {
@@ -797,11 +891,8 @@ var app = angular.module('tru.type.lib',
                         label: '@'
                     },
                     template: $templateCache.get('src/templates/edit/std-masked-edit.html'),
+                    controller: 'stdMaskedEditController',
                     link: function(scope, element) {
-                        scope.data = { value: scope.field.value.$ };
-                        scope.onChange = function() {
-                            scope.field.value.$ = scope.data.value;
-                        };
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -829,7 +920,7 @@ var app = angular.module('tru.type.lib',
 
                         angular.element(input).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
-                            if (!scope.field.isListContext)
+                            if (!scope.field.context.isGrid)
                                 input.select();
                         });
 
@@ -857,12 +948,8 @@ var app = angular.module('tru.type.lib',
                 var passwordInput, cancelButton;
 
                 $timeout(function () {
-                    var elements = $element[0].querySelectorAll('input,button');
-                    passwordInput = elements[0];
-                    cancelButton = elements[elements.length - 1];
-                    if (passwordInput) {
-                        passwordInput.focus();
-                    }
+                    var passwordInput = $element[0].querySelectorAll('input')[0];
+                    passwordInput.focus();
                 });
 
                 function documentKeyDownFn(e) {
@@ -907,23 +994,16 @@ var app = angular.module('tru.type.lib',
                 $scope.mouseOverPassword = false;
                 $scope.mouseOverConfirmPassword = false;
 
+                $scope.cancel = function (e) {
+                    $timeout(function () { modal.reject() });
+                };
+
                 $scope.onOkKeyDown = function (e) {
                     if (e.keyCode === 13)
                         $scope.onOkClick();
                 };
 
-                $scope.onPasswordKeyDown = function (e) {
-                    if (e.keyCode === 9 && e.shiftKey) {
-                        e.preventDefault();
-                        cancelButton.focus();
-                    }
-                };
-
                 $scope.onCancelKeyDown = function (e) {
-                    if (e.keyCode === 9 && !e.shiftKey) {
-                        e.preventDefault();
-                        passwordInput.focus();
-                    }
                     if (e.keyCode === 13)
                         modal.reject();
                 };
@@ -1074,34 +1154,59 @@ var app = angular.module('tru.type.lib',
         return {
             restrict: 'A',
             replace: false,
-            link: function (scope, element, attrs) {
-                var tpl = $compile('<div ' + scope.field.property.pickerName + '-picker' +' field="field" view="view"></div>')(scope);
+            terminal: true,
+            priority: 1000,
+            link: function (scope, element, attrs, ctrls, transclude) {
+                var tpl = $compile('<div ' + scope.field.property.pickerName + '-picker' + ' field="field" view="view"></div>')(scope);
                 element.append(tpl);
             }
         };
     }]);
 
     module.controller('stdRecordPickerModalController',
-        ['$scope', '$element', '$timeout', 'stdModal',
-            function ($scope, $element, $timeout, modal) {
+        ['$scope', '$element', '$timeout', '$document', 'stdModal',
+            function ($scope, $element, $timeout, $document, modal) {
+                var keydownListener = function (e) {
+                    if (e.keyCode === 27) {
+                        $timeout(function () { modal.reject() });
+                    }
+                };
+
+                $scope.modal = {
+                    height:400,
+                    width:700
+                };
+
                 $scope.selectedId = 0;
-                $scope.searchIsFocused = true;
+                $scope.childSearchIsFocused = true;
 
-                $scope.clear = function() {
-                    modal.resolve(null);
+                $scope.clear = function () {
+                    $timeout(function () { modal.resolve(null) });
                 };
 
-                $scope.cancel = function(e) {
+                $scope.onClearKeydown = function (e) {
+                    if (e.keyCode === 13) {
+                        $timeout(function () { modal.resolve(null) });
+                    }
+                };
+
+                $scope.cancel = function (e) {
                     if (e.keyCode === 13) { e.preventDefault(); return false; }
-                    modal.reject();
+                    $timeout(function () { modal.reject() });
                 };
 
 
-                $scope.submit = function(id) {
+                $scope.submit = function (id) {
                     if (id)
                         $scope.selectedId = id;
-                    modal.resolve($scope.selectedId);
+                    $timeout(function () { modal.resolve($scope.selectedId) });
                 };
+
+                $scope.$on('$destroy', function () {
+                    $document[0].removeEventListener('keydown', keydownListener);
+                });
+
+                $document[0].addEventListener('keydown', keydownListener, true);
             }]);
 
     module.controller('stdRecordPickerEditController',
@@ -1113,7 +1218,7 @@ var app = angular.module('tru.type.lib',
                     $scope.data = { displayValue: 'Loading...' };
                     $scope.data.show = false;
                     if ($scope.field.value.$) {
-                        $scope.field.queryByRef($scope.field.value.$).then(function(results) {
+                        $scope.field.queryByRef($scope.field.value.$).then(function (results) {
                             $scope.data.displayValue = results.label;
                             $scope.data.show = true;
                         });
@@ -1122,26 +1227,62 @@ var app = angular.module('tru.type.lib',
                     }
                 };
 
-                self.focusElement = function () {
+                self.cleanUp = function () {
+                    $scope.open = false;
                     $timeout(function () {
                         $element[0].querySelectorAll('button')[0].focus();
                     });
                 };
 
 
-                $scope.showRecordPickerModal = function () {
-                    var promise = modal.open(
-                        'recordPicker'
-                    );
-                    promise.then(
-                        function handleResolve(response) {
-                            $scope.field.value.$ = response;
-                            self.focusElement();
-                        },
-                        function handleReject(error) {
-                            self.focusElement();
-                        }
-                    );
+                self.showRecordPickerModal = function () {
+                    $scope.open = true;
+                    $timeout(function () {
+                        var promise = modal.open(
+                            'recordPicker'
+                        );
+                        promise.then(
+                            function handleResolve(response) {
+                                $scope.field.value.$ = response;
+                                if ($scope.field.context.isGrid) {
+                                    $element.remove();
+                                    $scope.$destroy();
+                                } else {
+                                    self.cleanUp();
+                                }
+                            },
+                            function handleReject(error) {
+                                if ($scope.field.context.isGrid) {
+                                    $element.remove();
+                                } else {
+                                    self.cleanUp();
+                                }
+                            }
+                        );
+                    });
+                };
+
+                if ($scope.field.context.isGrid) {
+                    self.showRecordPickerModal();
+                }
+
+                $scope.onClick = function () {
+                    if (!$scope.open)
+                        self.showRecordPickerModal();
+                };
+
+                $scope.onKeydown = function (e) {
+                    if (!$scope.open && e.keyCode === 13)
+                        self.showRecordPickerModal();
+                };
+
+                $scope.showArrow = false;
+                $scope.onInputMousedown = function () {
+                    if ($scope.showArrow) return;
+                    $scope.showArrow = true;
+                    $timeout(function () {
+                        $scope.showArrow = false;
+                    }, 5000);
                 };
 
                 $scope.$watch('field.value.$', function () { self.init(); });
@@ -1221,7 +1362,7 @@ var app = angular.module('tru.type.lib',
 
                         angular.element(input).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
-                            if (!scope.field.isListContext) {
+                            if (!scope.field.context.isGrid) {
                                 $timeout(function() {
                                     input.select();
                                 });
@@ -1232,9 +1373,6 @@ var app = angular.module('tru.type.lib',
                             if (e.keyCode === 27) {
                                 scope.field.value.$ = oldValue;
                                 input.blur();
-                            }
-                            if (e.keyCode === 46) {
-                                scope.field.value.$ = null;
                             }
                         });
 
@@ -1249,6 +1387,11 @@ var app = angular.module('tru.type.lib',
 
     var module = angular.module('std.time.edit', []);
 
+    module.controller('stdTimeEditController', ['$scope', '$element', '$timeout',
+        function ($scope, $element, $timeout) {
+
+        }]);
+
     module.directive('stdTimeEdit',
         ['$templateCache', '$timeout', 'stdDisplay',
             function($templateCache, $timeout, display) {
@@ -1258,12 +1401,9 @@ var app = angular.module('tru.type.lib',
                         field: '=',
                         label: '@'
                     },
+                    controller: 'stdTimeEditController',
                     template: $templateCache.get('src/templates/edit/std-time-edit.html'),
                     link: function(scope, element, attrs) {
-                        scope.data = {period: scope.field.property.period};
-                        scope.setPeriod = function() {
-                            scope.field.property.period = scope.data.period === 'AM' ? 'PM' : 'AM';
-                        };
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -1318,6 +1458,28 @@ var app = angular.module('tru.type.lib',
                     },
                     template: $templateCache.get('src/templates/edit/std-usa-dollar-edit.html'),
                     link: function(scope, element, attrs, ngModelCtrl) {
+                        display.setVisibility(element, scope.field.type.canDisplay);
+                    }
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.usa.zip.5.edit', []);
+
+    module.directive('stdUsaZip5Edit',
+        ['$templateCache', 'stdDisplay',
+            function($templateCache, display) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    template: $templateCache.get('src/templates/edit/std-usa-zip-5-edit.html'),
+                    link: function(scope, element) {
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -1390,6 +1552,7 @@ var app = angular.module('tru.type.lib',
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -1400,21 +1563,21 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    if (typeof value !== 'undefined') {
-                        queryPredicate.set('', operator, value);
-                    } else {
-                        queryPredicate.clear();
-                    }
-                }
-            }();
 
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                if (typeof value !== 'undefined') {
+                    queryPredicate.set('', operator, value);
+                } else {
+                    queryPredicate.clear();
+                }
+            };
             $scope.valueIsUndefined = function () {
                 return (typeof ctrlValue === 'undefined');
             };
@@ -1424,8 +1587,9 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
@@ -1450,10 +1614,11 @@ var app = angular.module('tru.type.lib',
             else
                 $scope.field.value.$ = undefined;
 
+            $scope.updateQueryPredicate();
+
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -1501,6 +1666,7 @@ var app = angular.module('tru.type.lib',
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -1511,16 +1677,16 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    typeof value !== 'undefined' ? queryPredicate.set('', operator, value) : queryPredicate.clear();
-                }
-            }();
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                typeof value !== 'undefined' ? queryPredicate.set('', operator, value) : queryPredicate.clear();
+            };
 
             $scope.data = { value: undefined };
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
@@ -1535,14 +1701,16 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
+
+            $scope.updateQueryPredicate();
 
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -1590,6 +1758,7 @@ var app = angular.module('tru.type.lib',
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -1600,46 +1769,46 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
 
-                    if (value && util.isDate(value)) {
-                        var predicates = [];
-                        var startValue = new Date(value);
-                        var endValue = new Date(value);
-                        if (operator === 'eq') {
-                            startValue.setHours(0,0,0,0);
-                            endValue.setHours(23,59,59,999);
-                            predicates.push(queryPredicate.create('', 'gt', startValue));
-                            predicates.push(queryPredicate.create('', 'lt', endValue));
-                            queryPredicate.set(predicates[0].and(predicates[1]));
-                        }
-                        if (operator === 'lt') {
-                            startValue.setHours(0,0,0,0);
-                            queryPredicate.set('', 'lt', startValue);
-                        }
-                        if (operator === 'gt') {
-                            startValue.setHours(23,59,59,999);
-                            queryPredicate.set('', 'gt', startValue);
-                        }
-                        if (operator === 'le') {
-                            startValue.setHours(23,59,59,999);
-                            queryPredicate.set('', 'le', startValue);
-                        }
-                        if (operator === 'ge') {
-                            startValue.setHours(0,0,0,0);
-                            queryPredicate.set('', 'ge', startValue);
-                        }
-                    } else {
-                        queryPredicate.clear();
+                if (value && util.isDate(value)) {
+                    var predicates = [];
+                    var startValue = new Date(value);
+                    var endValue = new Date(value);
+                    if (operator === 'eq') {
+                        startValue.setHours(0,0,0,0);
+                        endValue.setHours(23,59,59,999);
+                        predicates.push(queryPredicate.create('', 'gt', startValue));
+                        predicates.push(queryPredicate.create('', 'lt', endValue));
+                        queryPredicate.set(predicates[0].and(predicates[1]));
                     }
+                    if (operator === 'lt') {
+                        startValue.setHours(0,0,0,0);
+                        queryPredicate.set('', 'lt', startValue);
+                    }
+                    if (operator === 'gt') {
+                        startValue.setHours(23,59,59,999);
+                        queryPredicate.set('', 'gt', startValue);
+                    }
+                    if (operator === 'le') {
+                        startValue.setHours(23,59,59,999);
+                        queryPredicate.set('', 'le', startValue);
+                    }
+                    if (operator === 'ge') {
+                        startValue.setHours(0,0,0,0);
+                        queryPredicate.set('', 'ge', startValue);
+                    }
+                } else {
+                    queryPredicate.clear();
                 }
-            }();
+            };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
             $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
@@ -1653,14 +1822,16 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
+
+            $scope.updateQueryPredicate();
 
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -1712,6 +1883,8 @@ var app = angular.module('tru.type.lib',
 
                     if (!ctrlEndValueHasValue)
                         $scope.data.endDate = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -1730,34 +1903,34 @@ var app = angular.module('tru.type.lib',
                         else
                             $scope.data.endDate = undefined;
                     }
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function () {
-                    var queryPredicate = $scope.field.queryPredicate;
-                    var predicates = [];
+            $scope.updateQueryPredicate = function() {
+                var queryPredicate = $scope.field.queryPredicate;
+                var predicates = [];
 
-                    if ($scope.data.startDate) {
-                        var startValue = new Date($scope.data.startDate.toUTCString());
-                        startValue.setHours(0,0,0,0);
-                        predicates.push(queryPredicate.create('', startOperator, startValue));
-                    }
-
-                    if ($scope.data.endDate) {
-                        var endValue = new Date($scope.data.endDate.toUTCString());
-                        endValue.setHours(23,59,59,999);
-                        predicates.push(queryPredicate.create('', endOperator, endValue));
-                    }
-                    if (predicates.length) {
-                        var predicate = predicates[0];
-                        if (predicates.length > 1)
-                            predicate = predicate.and(predicates[1]);
-                        queryPredicate.set(predicate);
-                    } else
-                        queryPredicate.clear();
+                if ($scope.data.startDate) {
+                    var startValue = new Date($scope.data.startDate.toUTCString());
+                    startValue.setHours(0,0,0,0);
+                    predicates.push(queryPredicate.create('', startOperator, startValue));
                 }
-            }();
+
+                if ($scope.data.endDate) {
+                    var endValue = new Date($scope.data.endDate.toUTCString());
+                    endValue.setHours(23,59,59,999);
+                    predicates.push(queryPredicate.create('', endOperator, endValue));
+                }
+                if (predicates.length) {
+                    var predicate = predicates[0];
+                    if (predicates.length > 1)
+                        predicate = predicate.and(predicates[1]);
+                    queryPredicate.set(predicate);
+                } else
+                    queryPredicate.clear();
+            };
 
             $scope.data = {
                 startDate: undefined,
@@ -1770,13 +1943,15 @@ var app = angular.module('tru.type.lib',
             $scope.endOperatorImageMessage = operatorLookup[endDateInclusive].operatorImageMessage;
 
             $scope.onStartOperatorClick = function() {
-                if (ctrlStartValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlStartValueHasValue || $scope.field.context.isEditing) return;
                 $scope.data.startDate = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.onEndOperatorClick = function() {
-                if (ctrlEndValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlEndValueHasValue || $scope.field.context.isEditing) return;
                 $scope.data.endDate = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.init = function() {
@@ -1791,7 +1966,6 @@ var app = angular.module('tru.type.lib',
 
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -1850,7 +2024,7 @@ var app = angular.module('tru.type.lib',
                             startLabel.remove();
                             endLabel.remove();
 
-                            var onPredicateCB = function () {
+                            var onPredicateCB = function() {
                                 return function () {
                                     var predicates = [];
                                     var queryPredicate = scope.field.queryPredicate;
@@ -1862,9 +2036,9 @@ var app = angular.module('tru.type.lib',
                                         var startStartValue = new Date(start.toUTCString());
                                         var startEndValue = new Date(end.toUTCString());
 
-                                        startStartValue.setHours(0,0,0,0);
+                                        startStartValue.setHours(0, 0, 0, 0);
                                         predicates.push(queryPredicate.create('Start', 'ge', startStartValue));
-                                        startEndValue.setHours(23,59,59,999);
+                                        startEndValue.setHours(23, 59, 59, 999);
                                         predicates.push(queryPredicate.create('Start', 'le', startEndValue));
 
                                         if (predicates.length) {
@@ -1889,7 +2063,6 @@ var app = angular.module('tru.type.lib',
                                     } else {
                                         queryPredicate.clear();
                                     }
-
                                 }
                             }();
 
@@ -1924,6 +2097,7 @@ var app = angular.module('tru.type.lib',
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -1934,6 +2108,8 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -1949,14 +2125,16 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
+
+            $scope.updateQueryPredicate();
 
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -2008,6 +2186,8 @@ var app = angular.module('tru.type.lib',
 
                     if (!ctrlEndValueHasValue)
                         $scope.data.endDate = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -2026,30 +2206,30 @@ var app = angular.module('tru.type.lib',
                         else
                             $scope.data.endDate = undefined;
                     }
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function () {
-                    var queryPredicate = $scope.field.queryPredicate;
-                    var predicates = [];
+            $scope.updateQueryPredicate = function() {
+                var queryPredicate = $scope.field.queryPredicate;
+                var predicates = [];
 
-                    if ($scope.data.startDate) {
-                        predicates.push(queryPredicate.create('', startOperator, $scope.data.startDate));
-                    }
-
-                    if ($scope.data.endDate) {
-                        predicates.push(queryPredicate.create('', endOperator, $scope.data.endDate));
-                    }
-                    if (predicates.length) {
-                        var predicate = predicates[0];
-                        if (predicates.length > 1)
-                            predicate = predicate.and(predicates[1]);
-                        queryPredicate.set(predicate);
-                    } else
-                        queryPredicate.clear();
+                if ($scope.data.startDate) {
+                    predicates.push(queryPredicate.create('', startOperator, $scope.data.startDate));
                 }
-            }();
+
+                if ($scope.data.endDate) {
+                    predicates.push(queryPredicate.create('', endOperator, $scope.data.endDate));
+                }
+                if (predicates.length) {
+                    var predicate = predicates[0];
+                    if (predicates.length > 1)
+                        predicate = predicate.and(predicates[1]);
+                    queryPredicate.set(predicate);
+                } else
+                    queryPredicate.clear();
+            };
 
             $scope.data = {
                 startDate: undefined,
@@ -2073,7 +2253,6 @@ var app = angular.module('tru.type.lib',
 
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -2122,6 +2301,7 @@ var app = angular.module('tru.type.lib',
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -2132,16 +2312,16 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
-                }
-            }();
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
+            };
 
             $scope.valueIsUndefined = function () {
                 return (typeof ctrlValue === 'undefined');
@@ -2152,17 +2332,19 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
             $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
 
+            $scope.updateQueryPredicate();
+
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -2198,11 +2380,13 @@ var app = angular.module('tru.type.lib',
             var ctrlValueHasValue = typeof ctrlValue !== 'undefined';
             var ctrlDefaultHasValue = typeof ctrlDefault !== 'undefined';
             var operator = operatorLookup[$scope.field.property.operator].operator;
+            var unregOnChoicesChange = undefined;
 
             var onClearCB = function(){
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -2213,20 +2397,47 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
                     else
                         $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    if (typeof value !== 'undefined') {
-                        queryPredicate.set('', operator, value);
-                    } else {
-                        queryPredicate.clear();
-                    }
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                if (typeof value !== 'undefined') {
+                    queryPredicate.set('', operator, value);
+                } else {
+                    queryPredicate.clear();
                 }
-            }();
+            };
+
+            $scope.data = {
+                choices: [],
+                label: undefined
+            };
+
+            var loadChoices = function(choices) {
+                if (choices == null) return;
+                $scope.data.choices = angular.copy(choices);
+
+                $scope.data.choices.unshift({label: '', value: {$: undefined}});
+
+                if ($scope.field.type.isNullable) {
+                    $scope.data.choices.push({label: 'Null', value: {$: 'null'}});
+                }
+
+                if (ctrlValueHasValue) {
+                    $scope.data.label = $scope.data.choices.filter(function (obj) {
+                        return obj.value.$ === ctrlValue;
+                    })[0].label;
+                    $scope.field.value.$ = util.tryParseInt(ctrlValue, ctrlValue);
+                } else if (ctrlDefaultHasValue)
+                    $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
+                else
+                    $scope.field.value.$ = undefined;
+
+                $scope.updateQueryPredicate();
+            };
 
             $scope.valueIsUndefined = function () {
                 return (typeof ctrlValue === 'undefined');
@@ -2237,49 +2448,30 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
             $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
 
-
-            $scope.data = {
-                choices: [],
-                label: undefined
-            };
-
             if(ctrlValue === null) {
                 $scope.data.label = 'Null';
                 $scope.field.value.$ = null;
+                $scope.updateQueryPredicate();
             } else {
-                $scope.field.queryChoices($scope).then(function (results) {
-                    $scope.data.choices = angular.copy(results);
-
-                    $scope.data.choices.unshift({label: '', value: {$: undefined}});
-
-                    if ($scope.field.type.isNullable) {
-                        $scope.data.choices.push({label: 'Null', value: {$: 'null'}});
-                    }
-
-                    if (ctrlValueHasValue) {
-                        $scope.data.label = $scope.data.choices.filter(function (obj) {
-                            return obj.value.$ === ctrlValue;
-                        })[0].label;
-                        $scope.field.value.$ = util.tryParseInt(ctrlValue, ctrlValue);
-                    } else if (ctrlDefaultHasValue)
-                        $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
-                    else
-                        $scope.field.value.$ = undefined;
-                });
+                unregOnChoicesChange = $scope.field.onChoicesChanged(loadChoices);
             }
+
+            $scope.$on("$destroy", function () {
+                unregOnChoicesChange();
+            });
 
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
-            }
+            };
         }]);
 
     module.directive('stdDropdownQuery',
@@ -2306,6 +2498,7 @@ var app = angular.module('tru.type.lib',
                                         scope.field.value.$ = undefined;
                                     }
                                 }
+                                scope.updateQueryPredicate();
                             });
                         });
 
@@ -2340,6 +2533,7 @@ var app = angular.module('tru.type.lib',
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -2350,16 +2544,16 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
-                }
-            }();
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
+            };
 
             $scope.valueIsUndefined = function () {
                 return (typeof ctrlValue === 'undefined');
@@ -2370,17 +2564,19 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
             $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
 
+            $scope.updateQueryPredicate();
+
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -2428,6 +2624,7 @@ var app = angular.module('tru.type.lib',
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -2438,16 +2635,16 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
-                }
-            }();
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
+            };
 
             $scope.valueIsUndefined = function () {
                 return (typeof ctrlValue === 'undefined');
@@ -2458,17 +2655,19 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
             $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
 
+            $scope.updateQueryPredicate();
+
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -2523,27 +2722,35 @@ var app = angular.module('tru.type.lib',
             var startOperator = operatorLookup[startInclusive].operator;
             var endOperator = operatorLookup[endInclusive].operator;
 
-            var onPredicateCB = function () {
-                return function () {
-                    var queryPredicate = $scope.field.queryPredicate;
-                    var predicates = [];
+            $scope.updateQueryPredicate = function() {
+                var queryPredicate = $scope.field.queryPredicate;
+                var predicates = [];
 
-                    if ($scope.data.startValue) {
-                        predicates.push(queryPredicate.create('', startOperator, $scope.data.startValue));
-                    }
-
-                    if ($scope.data.endValue) {
-                        predicates.push(queryPredicate.create('', endOperator, $scope.data.endValue));
-                    }
-                    if (predicates.length) {
-                        var predicate = predicates[0];
-                        if (predicates.length > 1)
-                            predicate = predicate.and(predicates[1]);
-                        queryPredicate.set(predicate);
-                    } else
-                        queryPredicate.clear();
+                if ($scope.data.startValue) {
+                    predicates.push(queryPredicate.create('', startOperator, $scope.data.startValue));
                 }
-            }();
+
+                if ($scope.data.endValue) {
+                    predicates.push(queryPredicate.create('', endOperator, $scope.data.endValue));
+                }
+                if (predicates.length) {
+                    var predicate = predicates[0];
+                    if (predicates.length > 1)
+                        predicate = predicate.and(predicates[1]);
+                    queryPredicate.set(predicate);
+                } else
+                    queryPredicate.clear();
+            };
+
+            $scope.onStartOperatorClick = function() {
+                $scope.data.startValue = undefined;
+                $scope.updateQueryPredicate();
+            };
+
+            $scope.onEndOperatorClick = function() {
+                $scope.data.endValue = undefined;
+                $scope.updateQueryPredicate();
+            };
 
             $scope.data = {
                 startValue: undefined,
@@ -2567,7 +2774,6 @@ var app = angular.module('tru.type.lib',
 
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -2603,11 +2809,13 @@ var app = angular.module('tru.type.lib',
             var ctrlValueHasValue = ctrlValue.length > 0;
             var ctrlDefaultHasValue = ctrlDefault.length > 0;
             var operator = operatorLookup[$scope.field.property.operator].operator;
+            var unregOnChoicesChange = undefined;
 
             var onClearCB = function(){
                 return function() {
                     if (ctrlValueHasValue) return;
                     angular.forEach($scope.data.choices, function (choice) { choice.checked = false; });
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -2620,29 +2828,56 @@ var app = angular.module('tru.type.lib',
                         });
                     else
                         angular.forEach($scope.data.choices, function (choice) { choice.checked = false; });
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function () {
-                return function () {
-                    var queryPredicate = $scope.field.queryPredicate;
-                    var predicates = [];
+            $scope.updateQueryPredicate = function() {
+                var queryPredicate = $scope.field.queryPredicate;
+                var predicates = [];
 
-                    angular.forEach($scope.data.choices, function (choice) {
-                        if (choice.checked)
-                            predicates.push(queryPredicate.create('', operator, choice.value.$));
-                    });
+                angular.forEach($scope.data.choices, function (choice) {
+                    if (choice.checked)
+                        predicates.push(queryPredicate.create('', operator, choice.value.$));
+                });
 
-                    if (predicates.length) {
-                        var predicate = predicates[0];
-                        for (var i = 1; i < predicates.length; i++) {
-                            predicate = predicate.or(predicates[i]);
+                if (predicates.length) {
+                    var predicate = predicates[0];
+                    for (var i = 1; i < predicates.length; i++) {
+                        predicate = predicate.or(predicates[i]);
+                    }
+                    queryPredicate.set(predicate);
+                } else
+                    queryPredicate.clear();
+            };
+
+            var loadChoices = function(choices) {
+                angular.forEach(choices, function (choice) {
+                    if (ctrlValueHasValue) {
+                        if (ctrlValue.indexOf(choice.value.$) !== -1) {
+                            $scope.data.labels.push(choice.label);
+                            choice["checked"] = true;
                         }
-                        queryPredicate.set(predicate);
-                    } else
-                        queryPredicate.clear();
+                    } else if (ctrlDefaultHasValue) {
+                        choice["checked"] = ctrlDefault.indexOf(choice.value.$) !== -1;
+                    } else {
+                        choice["checked"] = false;
+                    }
+                    $scope.data.choices.push(angular.copy(choice));
+                    $scope.updateQueryPredicate();
+                });
+
+                if ($scope.field.type.isNullable) {
+                    $scope.data.choices.push({
+                        checked: false,
+                        label: 'Null',
+                        value: { $: null }
+                    })
                 }
-            }();
+
+                $scope.updateQueryPredicate();
+            };
 
             $scope.data = { choices: [], labels: [] };
 
@@ -2654,7 +2889,7 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function () {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 if ($scope.checked) {
                     angular.forEach($scope.data.choices, function (choice) {
                         choice.checked = false;
@@ -2672,34 +2907,15 @@ var app = angular.module('tru.type.lib',
                 }).length > 0;
             }, true);
 
-            $scope.field.queryChoices($scope).then(function (results) {
-                angular.forEach(results, function (choice) {
-                    if (ctrlValueHasValue) {
-                        if (ctrlValue.indexOf(choice.value.$) !== -1) {
-                            $scope.data.labels.push(choice.label);
-                            choice["checked"] = true;
-                        }
-                    } else if (ctrlDefaultHasValue) {
-                        choice["checked"] = ctrlDefault.indexOf(choice.value.$) !== -1;
-                    } else {
-                        choice["checked"] = false;
-                    }
-                    $scope.data.choices.push(angular.copy(choice));
-                });
+            unregOnChoicesChange = $scope.field.onChoicesChanged(loadChoices);
 
-                if ($scope.field.type.isNullable) {
-                    $scope.data.choices.push({
-                        checked: false,
-                        label: 'Null',
-                        value: { $: null }
-                    })
-                }
+            $scope.$on("$destroy", function () {
+                unregOnChoicesChange();
             });
 
             $scope.init = function () {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -2747,6 +2963,7 @@ var app = angular.module('tru.type.lib',
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -2757,16 +2974,16 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
-                }
-            }();
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
+            };
 
             $scope.valueIsUndefined = function () {
                 return (typeof ctrlValue === 'undefined');
@@ -2777,17 +2994,19 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
             $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
 
+            $scope.updateQueryPredicate();
+
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -2823,11 +3042,13 @@ var app = angular.module('tru.type.lib',
             var ctrlValueHasValue = ctrlValue.length > 0;
             var ctrlDefaultHasValue = ctrlDefault.length > 0;
             var operator = operatorLookup[$scope.field.property.operator].operator;
+            var unregOnChoicesChange = undefined;
 
             var onClearCB = function(){
                 return function() {
                     if (ctrlValueHasValue) return;
                     angular.forEach($scope.data.choices, function (choice) { choice.checked = false; });
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -2840,29 +3061,29 @@ var app = angular.module('tru.type.lib',
                         });
                     else
                         angular.forEach($scope.data.choices, function (choice) { choice.checked = false; });
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function () {
-                return function () {
-                    var queryPredicate = $scope.field.queryPredicate;
-                    var predicates = [];
+            $scope.updateQueryPredicate = function() {
+                var queryPredicate = $scope.field.queryPredicate;
+                var predicates = [];
 
-                    angular.forEach($scope.data.choices, function (choice) {
-                        if (choice.checked)
-                            predicates.push(queryPredicate.create('', operator, choice.value.$));
-                    });
+                angular.forEach($scope.data.choices, function (choice) {
+                    if (choice.checked)
+                        predicates.push(queryPredicate.create('', operator, choice.value.$));
+                });
 
-                    if (predicates.length) {
-                        var predicate = predicates[0];
-                        for (var i = 1; i < predicates.length; i++) {
-                            predicate = predicate.or(predicates[i]);
-                        }
-                        queryPredicate.set(predicate);
-                    } else
-                        queryPredicate.clear();
-                }
-            }();
+                if (predicates.length) {
+                    var predicate = predicates[0];
+                    for (var i = 1; i < predicates.length; i++) {
+                        predicate = predicate.or(predicates[i]);
+                    }
+                    queryPredicate.set(predicate);
+                } else
+                    queryPredicate.clear();
+            };
 
             $scope.data = { choices: [], labels: [] };
 
@@ -2874,12 +3095,14 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function () {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 if ($scope.checked) {
                     angular.forEach($scope.data.choices, function (choice) {
                         choice.checked = false;
                     });
                 }
+
+                $scope.updateQueryPredicate();
             };
 
             $scope.$watch('data.choices', function () {
@@ -2888,8 +3111,8 @@ var app = angular.module('tru.type.lib',
                 }).length > 0;
             }, true);
 
-            $scope.field.queryChoices($scope).then(function (results) {
-                angular.forEach(results, function (choice) {
+            var loadChoices = function(choices) {
+                angular.forEach(choices, function (choice) {
                     if (ctrlValueHasValue) {
                         if (ctrlValue.indexOf(choice.value.$) !== -1) {
                             $scope.data.labels.push(choice.label);
@@ -2901,6 +3124,7 @@ var app = angular.module('tru.type.lib',
                         choice["checked"] = false;
                     }
                     $scope.data.choices.push(choice);
+                    $scope.updateQueryPredicate();
                 });
 
                 if ($scope.field.type.isNullable) {
@@ -2910,12 +3134,19 @@ var app = angular.module('tru.type.lib',
                         value: { $: null }
                     })
                 }
+
+                $scope.updateQueryPredicate();
+            };
+
+            unregOnChoicesChange = $scope.field.onChoicesChanged(loadChoices);
+
+            $scope.$on("$destroy", function () {
+                unregOnChoicesChange();
             });
 
             $scope.init = function () {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -2932,6 +3163,235 @@ var app = angular.module('tru.type.lib',
                     template: $templateCache.get('src/templates/query/std-radio-list-button-query.html'),
                     controller: 'stdRadioListButtonQueryController',
                     link: function(scope, element, attrs, searchGroupCtrl){
+                        scope.searchGroupCtrl = searchGroupCtrl;
+                        scope.init();
+                    }
+                };
+            }
+        ]);
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.record.picker.query', []);
+
+    module.directive('stdPickerView', ['$compile', '$http', function ($compile, $http) {
+        return {
+            restrict: 'A',
+            replace: false,
+            link: function (scope, element, attrs) {
+                var tpl = $compile('<div ' + scope.field.property.pickerName + '-picker' + ' field="field" view="view"></div>')(scope);
+                element.append(tpl);
+            }
+        };
+    }]);
+
+    module.controller('stdRecordPickerModalController',
+        ['$scope', '$element', '$timeout', '$document', 'stdModal',
+            function ($scope, $element, $timeout, $document, modal) {
+                var keydownListener = function (e) {
+                    if (e.keyCode === 27) {
+                        $timeout(function () { modal.reject() });
+                    }
+                };
+
+                $scope.modal = {
+                    height:400,
+                    width:700
+                };
+
+                $scope.selectedId = 0;
+                $scope.childSearchIsFocused = true;
+
+                $scope.clear = function () {
+                    $timeout(function () { modal.resolve(null) });
+                };
+
+                $scope.onClearKeydown = function (e) {
+                    if (e.keyCode === 13) {
+                        $timeout(function () { modal.resolve(null) });
+                    }
+                };
+
+                $scope.cancel = function (e) {
+                    if (e.keyCode === 13) { e.preventDefault(); return false; }
+                    $timeout(function () { modal.reject() });
+                };
+
+
+                $scope.submit = function (id) {
+                    if (id)
+                        $scope.selectedId = id;
+                    $timeout(function () { modal.resolve($scope.selectedId) });
+                };
+
+                $scope.$on('$destroy', function () {
+                    $document[0].removeEventListener('keydown', keydownListener);
+                });
+
+                $document[0].addEventListener('keydown', keydownListener, true);
+            }]);
+
+    module.controller('stdRecordPickerQueryController',
+        ['$scope', '$element', '$timeout', 'stdModal', 'stdOperatorLookup', 'stdUtil',
+            function ($scope, $element, $timeout, modal, operatorLookup, util) {
+                var self = this;
+
+                var ctrlValue = $scope.field.property.value;
+                var ctrlDefault = $scope.field.property.default;
+                var ctrlValueHasValue = typeof ctrlValue !== 'undefined';
+                var ctrlDefaultHasValue = typeof ctrlDefault !== 'undefined';
+                var operator = operatorLookup[$scope.field.property.operator].operator;
+
+                var onClearCB = function(){
+                    return function() {
+                        if (ctrlValueHasValue) return;
+                        $scope.field.value.$ = undefined;
+                        $scope.data.displayValue = undefined;
+                        $scope.updateQueryPredicate();
+                    }
+                }();
+
+                var onDefaultCB = function(){
+                    return function() {
+                        if (ctrlValueHasValue) return;
+                        if (ctrlDefaultHasValue)
+                            $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
+                        else
+                            $scope.field.value.$ = undefined;
+
+                        $scope.updateQueryPredicate();
+                    }
+                }();
+
+                $scope.updateQueryPredicate = function() {
+                    var value = $scope.field.value.$;
+                    var queryPredicate = $scope.field.queryPredicate;
+                    if (typeof value !== 'undefined') {
+                        queryPredicate.set('', operator, value);
+                    } else {
+                        queryPredicate.clear();
+                    }
+                };
+
+                $scope.valueIsUndefined = function () {
+                    return (typeof ctrlValue === 'undefined');
+                };
+
+                $scope.controlValueIsUndefined = function () {
+                    return (typeof $scope.field === 'undefined') || (typeof $scope.field.value.$ === 'undefined') || $scope.field.value.$ === '';
+                };
+
+                $scope.onOperatorClick = function() {
+                    if (ctrlValueHasValue || $scope.field.context.isEditing) return;
+                    $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
+                };
+
+                $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
+                $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
+
+
+                $scope.data = {
+                    choices: [],
+                    label: undefined
+                };
+
+                if(ctrlValue === null) {
+                    $scope.data.label = 'Null';
+                    $scope.field.value.$ = null;
+                } else {
+                    if (ctrlValueHasValue) {
+                        $scope.field.queryByRef(ctrlValue).then(function (results) {
+                            $scope.data.label = results.label;
+                        });
+                        $scope.field.value.$ = util.tryParseInt(ctrlValue, ctrlValue);
+                    } else if (ctrlDefaultHasValue)
+                        $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
+                    else
+                        $scope.field.value.$ = undefined;
+                }
+
+                $scope.init = function() {
+                    $scope.searchGroupCtrl.registerClear(onClearCB);
+                    $scope.searchGroupCtrl.registerDefault(onDefaultCB);
+                };
+
+                self.cleanUp = function () {
+                    $scope.open = false;
+                    $timeout(function () {
+                        $element[0].querySelectorAll('button')[0].focus();
+                    });
+                };
+
+
+                self.showRecordPickerModal = function () {
+                    $scope.open = true;
+                    $timeout(function () {
+                        var promise = modal.open(
+                            'recordPicker'
+                        );
+                        promise.then(
+                            function handleResolve(response) {
+                                $scope.field.queryByRef(response).then(function (results) {
+                                    $scope.data.displayValue = results.label;
+                                    $scope.field.value.$ = response;
+                                    $scope.updateQueryPredicate();
+                                });
+                                if ($scope.field.context.isGrid) {
+                                    $element.remove();
+                                    $scope.$destroy();
+                                } else {
+                                    self.cleanUp();
+                                }
+                            },
+                            function handleReject(error) {
+                                if ($scope.field.context.isGrid) {
+                                    $element.remove();
+                                } else {
+                                    self.cleanUp();
+                                }
+                            }
+                        );
+                    });
+                };
+
+                $scope.onClick = function () {
+                    if (!$scope.open)
+                        self.showRecordPickerModal();
+                };
+
+                $scope.onKeydown = function (e) {
+                    if (!$scope.open && e.keyCode === 13)
+                        self.showRecordPickerModal();
+                };
+
+                $scope.showArrow = false;
+                $scope.onInputMousedown = function () {
+                    if ($scope.showArrow) return;
+                    $scope.showArrow = true;
+                    $timeout(function () {
+                        $scope.showArrow = false;
+                    }, 5000);
+                };
+
+                $scope.updateQueryPredicate();
+            }]);
+
+    module.directive('stdRecordPickerQuery',
+        ['$templateCache', '$timeout', 'stdDisplay',
+            function ($templateCache, $timeout, display) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    require: '^truSearchGroup',
+                    controller: 'stdRecordPickerQueryController',
+                    template: $templateCache.get('src/templates/query/std-record-picker-query.html'),
+                    link: function (scope, element, attrs, searchGroupCtrl) {
                         scope.searchGroupCtrl = searchGroupCtrl;
                         scope.init();
                     }
@@ -2963,6 +3423,7 @@ var app = angular.module('tru.type.lib',
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -2973,16 +3434,16 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
-                }
-            }();
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
+            };
 
             $scope.valueIsUndefined = function () {
                 return (typeof ctrlValue === 'undefined');
@@ -2993,17 +3454,19 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
             $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
 
+            $scope.updateQueryPredicate();
+
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -3135,6 +3598,7 @@ var app = angular.module('tru.type.lib',
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -3145,16 +3609,16 @@ var app = angular.module('tru.type.lib',
                         $scope.field.value.$ = ctrlDefault;
                     else
                         $scope.field.value.$ = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
-                }
-            }();
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                value ? queryPredicate.set('', operator, value) : queryPredicate.clear();
+            };
 
             $scope.valueIsUndefined = function () {
                 return (typeof ctrlValue === 'undefined');
@@ -3165,8 +3629,9 @@ var app = angular.module('tru.type.lib',
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
@@ -3175,7 +3640,6 @@ var app = angular.module('tru.type.lib',
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 
@@ -4431,6 +4895,48 @@ var app = angular.module('tru.type.lib',
                             return date;
                         });
 
+                        function fillInPartialDate(val) {
+                            var dateParts = val.split(/[\s/:]+/);
+                            var period = dateParts[5];
+                            dateParts.pop();
+
+
+                            var today = new Date();
+
+                            var year = parseInt(dateParts[2]);
+                            var month = parseInt(dateParts[0]);
+                            var day = parseInt(dateParts[1]);
+                            var hour = parseInt(dateParts[3]);
+                            var minute = parseInt(dateParts[4]);
+                            var feb = year % 4 === 0 && (year % 100 || year % 400 === 0) ? 29 : 28;
+                            var monthDays = [31, feb, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+                            var numberOfDays = monthDays[month - 1];
+                            if (numberOfDays)
+                                day = (numberOfDays - day) >= 0 ? day : numberOfDays;
+
+                            year = !isNumber(year) ? today.getFullYear() : year;
+                            month = !isNumber(month) ? today.getMonth() + 1 : month;
+                            day = !isNumber(day) ? today.getDay() + 1 : day;
+                            hour = !isNumber(hour) ? 12 : hour;
+                            minute = !isNumber(minute) ? 0 : minute;
+                            return new Date(month + '/' + day + '/' + year + ' ' + hour + ':' + minute + ' ' + period);
+                        }
+
+                        scope.$on('$destroy', function () {
+                            if (scope.$parent.field.context.isGrid) {
+                                if (ngModelCtrl.$modelValue === null) {
+                                    //Do nothing
+                                } else if (Object.prototype.toString.call(ngModelCtrl.$modelValue) === "[object Date]") {
+                                    if (isNaN(ngModelCtrl.$modelValue.getTime())) {
+                                        scope.$parent.field.value.$ = fillInPartialDate(ngModelCtrl.$viewValue);
+                                    }
+                                }
+                                else {
+                                    scope.$parent.field.value.$ = fillInPartialDate(ngModelCtrl.$viewValue);
+                                }
+                            }
+                        });
                     }
                 };
             }]);
@@ -4614,28 +5120,376 @@ var app = angular.module('tru.type.lib',
     var module = angular.module('std.duration', []);
 
     module.directive('stdDuration',
-        [
-            function () {
+        ['$filter', '$timeout', '$parse',
+            function ($filter, $timeout, $parse) {
                 return {
                     require: 'ngModel',
                     scope: {
                         stdDurationPeriod: '='
                     },
                     link: function (scope, element, attrs, ngModelCtrl) {
-                        var lastValidInput = undefined;
+                        //TODO: Would like to pass field in as an isolated scope variable. Cannot do this currently due to the calendar directive already asking for isolation.
+                        var isNullable = $parse(attrs.isNullable)(scope);
+                        var format = 'hh:mm a';
+                        var timeZone = 0;
+                        var formatParts = format.split(/[\s/:]+/);
+                        var position1Format = formatParts[0].toLowerCase();
+                        var position2Format = formatParts[1].toLowerCase();
+                        var position3Format = formatParts[2].toLowerCase();
+
+                        //1
+                        var range1Start = 0;
+                        var range1End = position1Format.length;
+                        //2
+                        var range2Start = range1End + 1;
+                        var range2End = range2Start + position2Format.length;
+
+                        //3
+                        var range3Start = range2End + 1;
+                        var range3End = range3Start + 2;
+
+                        var range1 = createRange(range1Start, range1End);
+                        var range2 = createRange(range2Start, range2End);
+                        var range3 = createRange(range3Start, range3End);
+
+                        var selectedRange = [];
+                        var rangeInitialized = false;
+                        var externalEvent = false;
+                        var focusedValue;
+                        ngModelCtrl.rangeInitialized = rangeInitialized;
+                        var militaryTime = false; //scope.stdTime.property.militaryTime;
+
+                        var mouseDown = new Date().getTime(),
+                            previousMouseDown = mouseDown;
+
+                        var isIe = (navigator.userAgent.toLowerCase().indexOf("msie") != -1
+                        || navigator.userAgent.toLowerCase().indexOf("trident") != -1);
+
+                        function getCaretPosition() {
+                            var caretPos = 0;   // IE Support
+                            if (document.selection) {
+                                element[0].focus();
+                                var selection = document.selection.createRange();
+                                selection.moveStart('character', -element[0].value.length);
+                                caretPos = selection.text.length;
+                            }
+                            // Firefox support
+                            else if (element[0].selectionStart || element[0].selectionStart == '0')
+                                caretPos = element[0].selectionStart;
+                            return (caretPos);
+                        }
+
+                        function createRange(start, end) {
+                            var array = [];
+                            for (var i = start; i <= end; i++) {
+                                array.push(i);
+                            }
+                            return array;
+                        }
+
+                        function getSelectedText() {
+                            return element[0].value.substring(selectedRange[0], selectedRange[selectedRange.length - 1]);
+                        }
+
+                        function replaceRange(s, start, end, substitute) {
+                            return s.substring(0, start) + substitute + s.substring(end);
+                        }
+
+                        function zeroPad(num, places) {
+                            var zero = places - num.toString().length + 1;
+                            return Array(+(zero > 0 && zero)).join("0") + num;
+                        }
+
+                        function setValue(value) {
+                            ngModelCtrl.$setViewValue(replaceRange(element[0].value, selectedRange[0], selectedRange[selectedRange.length - 1], value));
+                            ngModelCtrl.$render();
+                        }
+
+                        function setRange(rangeStart, rangeEnd, rangeToSelect, ri) {
+                            element[0].setSelectionRange(rangeStart, rangeEnd);
+                            selectedRange = rangeToSelect;
+                            rangeInitialized = ri;
+                        }
+
+                        function getCharFromKeyCode(e) {
+                            if (e.keyCode >= 96 && e.keyCode <= 105)
+                                return parseInt(String.fromCharCode(e.keyCode - 48));
+
+                            return parseInt(String.fromCharCode(e.keyCode));
+                        }
+
+                        function isNumber(n) {
+                            return !isNaN(parseFloat(n)) && isFinite(n);
+                        }
+
+                        element.bind('keydown', function (e) {
+                            if (!focusedValue && focusedValue !== null)
+                                focusedValue = scope.field.value.$;
+
+                            if (e.keyCode === 27) {
+                                scope.field.value.$ = focusedValue;
+                                //ngModelCtrl.$setValidity('invalid-time', true);
+                                //ngModelCtrl.$setViewValue($filter('date')(new Date(focusedValue), 'MM/dd/yyyy hh:mm a'));
+                                //ngModelCtrl.$render();
+                                e.preventDefault();
+                                return;
+                            }
+
+                            if (e.keyCode === 37) {
+                                if (selectedRange === range3) {
+                                    setRange(range2Start, range2End, range2, true);
+                                } else if (selectedRange === range2) {
+                                    setRange(range1Start, range1End, range1, true);
+                                } else if (selectedRange === range1) {
+                                    setRange(range3Start, range3End, range3, true);
+                                }
+                            }
+                            if (e.keyCode === 39 || e.keyCode === 191) {
+                                if (selectedRange === range1) {
+                                    setRange(range2Start, range2End, range2, true);
+                                } else if (selectedRange === range2) {
+                                    setRange(range3Start, range3End, range3, true);
+                                } else if (selectedRange === range3) {
+                                    setRange(range1Start, range1End, range1, true);
+                                }
+                            }
+
+                            if (e.keyCode === 8) {
+                                var selectedText = getSelectedText();
+                                if (selectedRange === range1 && !isNaN(selectedText)) {
+                                    setValue(position1Format);
+                                    setRange(range1Start, range1End, range1, true);
+                                }
+                                else if (selectedRange === range1 && isNaN(selectedText)) {
+                                    setRange(range2Start, range2End, range2, true);
+                                }
+                                else if (selectedRange === range2 && !isNaN(selectedText)) {
+                                    setValue(position2Format);
+                                    setRange(range2Start, range2End, range2, true);
+                                }
+                                else if (selectedRange === range2 && isNaN(selectedText)) {
+                                    setRange(range3Start, range3End, range1, true);
+                                    setValue(position3Format);
+                                    setRange(range3Start, range3End, range1, true);
+                                }
+                                else if (selectedRange === range3 && !isNaN(selectedText)) {
+                                    setValue(position3Format);
+                                    setRange(range3Start, range3End, range3, true);
+                                }
+                                else if (selectedRange === range3 && isNaN(selectedText)) {
+                                    setRange(range1Start, range1End, range1, true);
+                                    setValue(position1Format);
+                                    setRange(range1Start, range1End, range1, true);
+                                }
+                            }
+
+                            if (e.keyCode === 46) {
+                                ngModelCtrl.$setViewValue('hh:mm AM');
+                                ngModelCtrl.$render();
+                                setRange(range1Start, range1End, range1, true);
+                                e.preventDefault();
+                                return;
+                            }
+
+                            if (e.keyCode === 9 && !e.shiftKey) {
+                                if (selectedRange === range1) {
+                                    setRange(range2Start, range2End, range2, true);
+                                    e.preventDefault();
+                                }
+                            }
+                            if (e.keyCode === 9 && e.shiftKey) {
+                                if (selectedRange === range2) {
+                                    setRange(range1Start, range1End, range1, true);
+                                    e.preventDefault();
+                                }
+                            }
+
+                            if ((e.keyCode >= 48 && e.keyCode <= 57) || (e.keyCode >= 96 && e.keyCode <= 105)) {
+                                var newValue,
+                                    oldValue,
+                                    selectedText = getSelectedText();
+
+                                if (selectedText === '') return;
+
+                                oldValue = parseInt(selectedText);
+                                newValue = getCharFromKeyCode(e);
+
+                                //NOTE: If selectedRange is not set assume an external event triggered the key event.
+                                if (selectedRange.length === 0) {
+                                    selectedRange = range1;
+                                    rangeInitialized = true;
+                                    externalEvent = true;
+                                }
+
+                                if (selectedRange === range1) {
+                                    if (position1Format === 'hh') {
+                                        if ([0].indexOf(oldValue) > -1 && [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1 && !rangeInitialized) {
+                                            setValue(oldValue.toString() + newValue.toString());
+                                            setRange(range2Start, range2End, range2, true);
+                                        } else if ([1].indexOf(oldValue) > -1 && [0, 1, 2].indexOf(newValue) > -1 && !rangeInitialized) {
+                                            setValue(oldValue.toString() + newValue.toString());
+                                            setRange(range2Start, range2End, range2, true);
+                                        } else if (militaryTime && oldValue === 1 && [3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1 && !rangeInitialized) {
+                                            setValue(oldValue.toString() + newValue.toString());
+                                            setRange(range2Start, range2End, range2, true);
+                                        } else if (militaryTime && oldValue === 2 && [1, 2, 3].indexOf(newValue) > -1 && !rangeInitialized) {
+                                            setValue(oldValue.toString() + newValue.toString());
+                                            setRange(range2Start, range2End, range2, true);
+                                        } else {
+                                            if (rangeInitialized || isNaN(oldValue)) {
+                                                setValue('0' + newValue.toString());
+                                                if ([0, 1].indexOf(newValue) > -1 || (militaryTime && [0, 1, 2].indexOf(newValue) > -1))
+                                                    setRange(range1Start, range1End, range1, false);
+                                                else
+                                                    setRange(range2Start, range2End, range2, true);
+                                            }
+                                            else {
+                                                if (!militaryTime && [2, 3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1) {
+                                                    setRange(range2Start, range2End, range2, true);
+                                                    setValue('0' + newValue.toString());
+                                                    setRange(range2Start, range2End, range2, false);
+                                                }
+                                                else if (militaryTime && [3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1) {
+                                                    setValue('0' + newValue.toString());
+                                                    setRange(range2Start, range2End, range2, true);
+                                                } else {
+                                                    setValue('0' + newValue.toString());
+                                                    setRange(range1Start, range1End, range1, true);
+                                                }
+                                            }
+                                        }
+                                    }
+                                } else if (selectedRange === range2) {
+                                    if (position2Format === 'mm') {
+                                        if ([0, 1, 2, 3, 4, 5].indexOf(oldValue) > -1 && [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].indexOf(newValue) > -1 && !rangeInitialized) {
+                                            setValue(oldValue.toString() + newValue.toString());
+                                            setRange(range1Start, range1End, range1, true);
+                                        } else {
+                                            setValue('0' + newValue.toString());
+                                            setRange(range2Start, range2End, range2, false);
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (selectedRange === range3) {
+                                var oldValue = getSelectedText();
+                                if (e.keyCode === 65) {
+                                    setValue('AM');
+                                }
+                                if (e.keyCode === 80) {
+                                    setValue('PM');
+                                }
+                                if (e.keyCode === 38 || e.keyCode === 40 || e.keyCode === 32) {
+                                    setValue(oldValue.toString() === 'AM' ? 'PM' : 'AM');
+                                }
+                                setRange(range3Start, range3End, range3, false);
+                            }
+
+                            if (e.keyCode !== 9)
+                                e.preventDefault();
+
+                        });
+
+                        element.bind('mouseup', function (e) {
+                            var caretPosition = getCaretPosition();
+                            var sel = window.getSelection();
+                            sel.removeAllRanges();
+
+                            if (range1.indexOf(caretPosition) > -1)
+                                setRange(range1Start, range1End, range1, true);
+
+                            if (range2.indexOf(caretPosition) > -1)
+                                setRange(range2Start, range2End, range2, true);
+
+                            if (range3.indexOf(caretPosition) > -1)
+                                setRange(range3Start, range3End, range3, true);
+                        });
+
+                        element.bind('mousemove', function (e) {
+                            if (e.stopPropagation) e.stopPropagation();
+                            if (e.preventDefault) e.preventDefault();
+                            e.cancelBubble = true;
+                            e.returnValue = false;
+                            return false;
+                        });
+
+                        element.bind('mousedown', function (e) {
+                            var time = new Date().getTime();
+
+                            if ((time - mouseDown) < 450) {
+                                previousMouseDown = mouseDown;
+                                mouseDown = time;
+
+                                e.preventDefault();
+                                return false;
+                            }
+
+                            previousMouseDown = mouseDown;
+                            mouseDown = time;
+                        });
+
+                        element.bind('copy', function (e) {
+                            var textToPutOnClipboard = element[0].value;
+
+                            if (isIe) {
+                                window.clipboardData.setData('Text', textToPutOnClipboard);
+                            } else {
+                                e.clipboardData.setData('text/plain', textToPutOnClipboard);
+                            }
+                            e.preventDefault();
+                        });
+
+                        element.bind('cut', function (e) {
+                            e.preventDefault();
+                        });
+
+                        element.bind('paste', function (e) {
+                            e.preventDefault();
+                        });
+
+                        element.bind('focus', function (e) {
+                            if (!focusedValue && focusedValue !== null)
+                                focusedValue = scope.field.value.$;
+
+                            $timeout(function () {
+                                if (externalEvent) {
+                                    externalEvent = false;
+                                    return;
+                                }
+
+                                var caretPosition = getCaretPosition();
+                                var sel = window.getSelection();
+                                sel.removeAllRanges();
+
+                                if (range1.indexOf(caretPosition) > -1)
+                                    setRange(range1Start, range1End, range1, true);
+
+                                if (range2.indexOf(caretPosition) > -1)
+                                    setRange(range2Start, range2End, range2, true);
+                            }, 0)
+                        });
+
+                        element.bind('blur', function (e) {
+                            if (ngModelCtrl.$modelValue === null)
+                                element[0].value = 'hh:mm AM';
+                        });
+
+                        element.addClass('ttl-date-selection');
+
                         var fromIsoDuration = function (value) {
                             var result = {};
-                            var duration = value.match(/^P([0-9]+Y|)?([0-9]+M|)?([0-9]+D|)?T?([0-9]+H|)?([0-9]+M|)?([0-9]+S|)?$/);
+                            var duration = moment.duration(value)._data;
 
                             if (duration) {
-                                var militaryHours = parseInt(duration[4] ? duration[4] : 0);
-                                result.years = parseInt(duration[1]);
-                                result.months = parseInt(duration[2]);
-                                result.days = parseInt(duration[3]);
+                                var militaryHours = duration.hours;
+                                result.years = duration.years;
+                                result.months = duration.months;
+                                result.days = duration.days;
                                 result.hours = militaryHours > 12 ? militaryHours - 12 : militaryHours;
                                 result.hours = militaryHours === 0 ? 12 : result.hours;
-                                result.minutes = parseInt(duration[5] ? duration[5] : 0);
-                                result.seconds = parseInt(duration[6]);
+                                result.minutes = duration.minutes;
+                                result.seconds = duration.seconds;
                                 result.period = militaryHours >= 12 ? 'PM' : 'AM';
                                 return result;
                             } else {
@@ -4643,117 +5497,47 @@ var app = angular.module('tru.type.lib',
                             }
                         };
 
-                        var prependZero = function (val) {
-                            if (val.toString().length === 1)
-                                val = '0' + val;
-                            return val;
-                        };
+                        ngModelCtrl.$formatters.push(function (val) {
+                            focusedValue = val;
+                            ngModelCtrl.$setValidity('invalid-time', true);
 
-                        var setViewValue = function () {
-                            var val = element[0].value;
-                            var timeParts = val.split(":");
-                            var hours = timeParts[0];
-                            var minutes = timeParts[1];
-
-                            if (!hours)
-                                hours = '00';
-                            if (!minutes)
-                                minutes = '00';
-
-                            if (hours.length === 1)
-                                hours = prependZero(hours);
-
-                            if (minutes.length === 1)
-                                minutes = prependZero(minutes);
-
-                            ngModelCtrl.$setViewValue(hours + ':' + minutes);
-                            ngModelCtrl.$render();
-                        };
-
-                        element.bind('blur', function (e) {
-                            setViewValue();
+                            var time = fromIsoDuration(val);
+                            if (time) {
+                                return zeroPad(time.hours, 2) + ':' + zeroPad(time.minutes, 2) + ' ' + time.period;
+                            } else {
+                                return 'hh:mm AM';
+                            }
                         });
-
-                        var replaceAt = function (index, character) {
-                            return this.substr(0, index) + character + this.substr(index + character.length);
-                        };
 
                         ngModelCtrl.$parsers.push(function (val) {
-                            var timeParts = val.split(":");
-                            var hoursStr = timeParts[0];
-                            var hours = parseInt(timeParts[0]);
-                            var minutesStr = timeParts[1];
-                            var minutes = parseInt(timeParts[1]);
-                            var colonCount = (val.match(/:/g) || []).length;
-                            var integerCount = val.replace(/[^0-9]+/g, '').length;
-                            var rawTime = val.replace(/:/i, '');
-                            var clean = rawTime.toString().replace(/[^0-9]+/g, '');
-                            if (val.length > 5 || colonCount > 1 || integerCount > 4 || rawTime !== clean) {
-                                ngModelCtrl.$setViewValue(lastValidInput);
-                                ngModelCtrl.$render();
-                                return ngModelCtrl.$modelValue;
-                            } else if (timeParts.length === 1 && !isNaN(hours)) {
-                                if (hours > 12 || hoursStr.length > 2) {
-                                    ngModelCtrl.$setViewValue(lastValidInput);
-                                    ngModelCtrl.$render();
-                                    return ngModelCtrl.$modelValue;
-                                }
-                                lastValidInput = val;
-                            } else if (timeParts.length === 2 && !isNaN(minutes)) {
-                                if (minutes > 59 || minutesStr.length > 2) {
-                                    ngModelCtrl.$setViewValue(lastValidInput);
-                                    ngModelCtrl.$render();
-                                    return ngModelCtrl.$modelValue;
-                                }
-                                lastValidInput = val;
-                            } else {
-                                lastValidInput = val;
-                            }
-
-                            if (!hoursStr)
-                                hoursStr = '00';
-                            if (!minutesStr)
-                                minutesStr = '00';
-
-                            if (hoursStr.length === 1)
-                                hoursStr = prependZero(hoursStr);
-
-                            if (minutesStr.length === 1)
-                                minutesStr = prependZero(minutes);
-
-                            if (scope.stdDurationPeriod === 'PM' && hours < 12)
-                                hoursStr = (+hoursStr + 12).toString();
-                            if (scope.stdDurationPeriod === 'AM' && hours === 12)
-                                hoursStr = '00';
-
-                            if (val) {
-                                var newDuration = 'PT'
-                                if (hoursStr !== '00')
-                                    newDuration += hoursStr + 'H';
-                                if (minutesStr !== '00')
-                                    newDuration += minutesStr + 'M';
-                                if (newDuration !== ngModelCtrl.$modelValue)
-                                    return newDuration;
+                            if (val === 'hh:mm AM' || val === 'hh:mm PM') {
+                                if (!isNullable)
+                                    ngModelCtrl.$setValidity('invalid-time', false);
                                 else
-                                    return ngModelCtrl.$modelValue
-                            } else {
-                                return ngModelCtrl.$modelValue;
+                                    ngModelCtrl.$setValidity('invalid-time', true);
+
+                                return null;
                             }
-                        });
 
-                        ngModelCtrl.$formatters.push(function (val) {
-                            var time = fromIsoDuration(val);
-                            scope.stdDurationPeriod = time.period;
-                            lastValidInput = prependZero(time.hours) + ':' + prependZero(time.minutes);
-                            return lastValidInput;
-                        });
+                            var timeParts = val.split(/[\s/:]+/);
+                            var period = timeParts[2];
 
-                        scope.$watch('stdDurationPeriod', function (val) {
-                            var temp = lastValidInput;
-                            ngModelCtrl.$setViewValue('');
-                            ngModelCtrl.$render();
-                            ngModelCtrl.$setViewValue(temp);
-                            ngModelCtrl.$render();
+                            //if (day !== parseInt(timeParts[1])) {
+
+                            //}
+                            //ngModelCtrl.$setViewValue(timeParts[0] + ':' + timeParts[1] + ' ' + period);
+                            var hours = parseInt(timeParts[0]);
+                            var minutes = parseInt(timeParts[1]);
+                            if (!militaryTime) {
+                                if (period === 'AM' && hours === 12) {
+                                    hours = 0;
+                                } else if (period === 'PM' && hours < 12) {
+                                    hours += 12;
+                                }
+                            }
+
+                            ngModelCtrl.$setValidity('invalid-time', true);
+                            return 'PT' + hours + 'H' + minutes + 'M';
                         });
                     }
                 };
@@ -4906,7 +5690,9 @@ var app = angular.module('tru.type.lib',
                     },
                     link: function (scope, element, attrs) {
                         document.addEventListener('focus', function (e) {
-                            scope.stdGridFocus = isDescendant(element[0], e.target) || e.target.tagName.toLowerCase() === 'body';
+                            //NOTE: Firefox does not support e.target
+                            var target = e.target || e.srcElement;
+                            scope.stdGridFocus = isDescendant(element[0], target) || (target.tagName && target.tagName.toLowerCase() === 'body');
                         }, true);
 
                         function isDescendant(parent, child) {
@@ -4993,9 +5779,9 @@ var app = angular.module('tru.type.lib',
                     },
                     link: function (scope, element, attrs, ngModelCtrl) {
                         var isNullable = scope.stdIntegerOnly.type.isNullable;
-                        var isEditContext = scope.stdIntegerOnly.isEditContext;
-                        var isSearchContext = scope.stdIntegerOnly.isSearchContext;
-                        var isListContext = scope.stdIntegerOnly.isListContext;
+                        var isEditContext = scope.stdIntegerOnly.context.isEdit;
+                        var isSearchContext = scope.stdIntegerOnly.context.isSearch;
+                        var isGridContext = scope.stdIntegerOnly.context.isGrid;
                         var maxValue = scope.stdIntegerOnly.type.property.maximumValue;
                         var minValue = scope.stdIntegerOnly.type.property.minimumValue;
                         maxValue = typeof maxValue === 'undefined' ? 2147483647 : maxValue;
@@ -5036,14 +5822,14 @@ var app = angular.module('tru.type.lib',
                             //clean === '' because isNaN return false for empty string.
                             if (clean === '' && isSearchContext) {
                                 return undefined;
-                            } else if (clean === '' && (isEditContext || isListContext)) {
+                            } else if (clean === '' && (isEditContext || isGridContext)) {
                                 return null;
                             } else if (isNaN(clean) && isSearchContext) {
                                 if (isNullable)
                                     return null;
                                 else
                                     return undefined;
-                            } else if (isNaN(clean) && (isEditContext || isListContext)) {
+                            } else if (isNaN(clean) && (isEditContext || isGridContext)) {
                                 return null;
                             } else
                                 return parseInt(clean);
@@ -5635,14 +6421,6 @@ var app = angular.module('tru.type.lib',
                     link: function (scope, element, attrs) {
                         scope.subview = null;
 
-                        element.on(
-                            "click",
-                            function handleClickEvent(event) {
-                                if (element[0] !== event.target) return;
-                                scope.$apply(modal.reject);
-                            }
-                        );
-
                         $rootScope.$on(
                             "modal.open",
                             function handleModalOpenEvent(event, modalType) {
@@ -5697,7 +6475,7 @@ var app = angular.module('tru.type.lib',
                         }
 
                         ngModelCtrl.$formatters.push(function (val) {
-                            return (val * 100) + '%';
+                            return (val * 100).toFixed(2) + '%';
                         });
 
                         ngModelCtrl.$parsers.push(function (val) {
@@ -5811,6 +6589,121 @@ var app = angular.module('tru.type.lib',
 (function () {
     'use strict';
 
+    var module = angular.module('std.resizable', []);
+
+    module.controller('stdResizableController', ['$scope',
+        function ($scope) {
+            var self = this;
+        }]);
+
+    module.directive('stdResizable', ['$document', function ($document) {
+        return {
+            restrict: 'A',
+            replace: false,
+            scope: {
+                modal: '=',
+                direction: '@'
+            },
+            link: function (scope, element, attrs) {
+
+                var currentHeight,
+                    currentWidth,
+                    currentTop,
+                    currentLeft,
+                    currentRight,
+                    currentBottom,
+                    currentMinHeight,
+                    currentMinWidth,
+                    mouseOffsetX = 0,
+                    mouseOffsetY = 0,
+                    lastMouseX = 0,
+                    lastMouseY = 0,
+                    originalHeight = 0,
+                    originalWidth = 0,
+                    viewport;
+
+                element.bind('mousedown', function (event) {
+                    event.preventDefault();
+                    mouseOffsetY = event.clientY;
+                    mouseOffsetX = event.clientX;
+                    originalHeight = parseInt(scope.modal.height, 10);
+                    originalWidth = parseInt(scope.modal.width, 10);
+                    viewport = getViewport();
+                    $document.on('mousemove', mouseMove);
+                    $document.on('mouseup', mouseUp);
+                });
+
+                var mouseMove = function (event) {
+                    scope.$apply(function () {
+                        var mouseY = event.pageY - mouseOffsetY;
+                        var mouseX = event.pageX - mouseOffsetX;
+                        var diffY = mouseY - lastMouseY;
+                        var diffX = mouseX - lastMouseX;
+                        lastMouseY = mouseY;
+                        lastMouseX = mouseX;
+
+                        currentHeight = parseInt(scope.modal.height, 10);
+                        currentWidth = parseInt(scope.modal.width, 10);
+                        currentMinHeight = parseInt(400, 10);
+                        currentMinWidth = parseInt(500, 10);
+
+                        if (scope.direction.indexOf("w") > -1) {
+                            if (currentWidth - diffX < currentMinWidth) mouseOffsetX = mouseOffsetX - (diffX - (diffX = currentWidth - currentMinWidth));
+
+                            //Contain resizing to the west
+                            if (currentLeft + diffX < 0)
+                                mouseOffsetX = mouseOffsetX - (diffX - (diffX = 0 - currentLeft));
+
+                            scope.modal.width = (currentWidth - diffX) + 'px';
+                        }
+                        if (scope.direction.indexOf("n") > -1) {
+                            if (currentHeight - diffY < currentMinHeight) mouseOffsetY = mouseOffsetY - (diffY - (diffY = currentHeight - currentMinHeight));
+
+                            //Contain resizing to the north
+                            if (diffY < 0) mouseOffsetY = mouseOffsetY - (diffY - (diffY));
+
+                            scope.modal.height = (currentHeight - diffY) + 'px';
+                        }
+                        if (scope.direction.indexOf("e") > -1) {
+                            if (currentWidth + diffX < currentMinWidth) mouseOffsetX = mouseOffsetX - (diffX - (diffX = currentMinWidth - currentWidth));
+
+                            //Contain resizing to the east
+                            if ((currentWidth) + diffX > viewport[0].offsetWidth)
+                                mouseOffsetX = mouseOffsetX - (diffX - (diffX = viewport[0].offsetWidth - (currentWidth)));
+
+                            scope.modal.width = (currentWidth + diffX) + 'px';
+                        }
+                        if (scope.direction.indexOf("s") > -1) {
+                            if (currentHeight + diffY < currentMinHeight) mouseOffsetY = mouseOffsetY - (diffY - (diffY = currentMinHeight - currentHeight));
+
+                            //Contain resizing to the south
+                            if ((currentHeight) + diffY > viewport[0].offsetHeight)
+                                mouseOffsetY = mouseOffsetY - (diffY - (diffY = viewport[0].offsetHeight - (currentHeight)));
+
+                            scope.modal.height = (currentHeight + diffY) + 'px';
+                        }
+                    });
+                }
+
+                var mouseUp = function () {
+                    mouseOffsetX = 0;
+                    mouseOffsetY = 0;
+                    lastMouseX = 0;
+                    lastMouseY = 0;
+                    $document.unbind('mousemove', mouseMove);
+                    $document.unbind('mouseup', mouseUp);
+                };
+
+                var getViewport = function () {
+                    return angular.element(document.querySelectorAll('.desktop-viewport-container')[0]);
+                };
+            }
+        };
+    }]);
+})();
+(function () {
+    'use strict';
+
     var module = angular.module('std.search.focus', []);
 
     module.directive('stdSearchFocus',
@@ -5822,7 +6715,9 @@ var app = angular.module('tru.type.lib',
                     },
                     link: function (scope, element, attrs) {
                         document.addEventListener('focus', function (e) {
-                            scope.stdSearchFocus(isDescendant(element[0], e.target) || e.target.tagName.toLowerCase() === 'body');
+                            //NOTE: Firefox does not support e.target
+                            var target = e.target || e.srcElement;
+                            scope.stdSearchFocus(isDescendant(element[0], target) || (target.tagName && target.tagName.toLowerCase() === 'body'));
                         }, true);
 
                         function isDescendant(parent, child) {
@@ -6233,13 +7128,18 @@ var app = angular.module('tru.type.lib',
                     restrict: 'A',
                     link: function (scope, element) {
                         var keyCode, shiftKey;
-                        var focusListener = function (e) {
-                            if (!element[0].contains(e.target)) {
-                                var elements = element[0].querySelectorAll('input:not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not(:disabled)');
-                                if (shiftKey && keyCode === 9)
+                        var blurListener = function (e) {
+                            var elements = element[0].querySelectorAll('input:not(:disabled),select:not(:disabled),textarea:not(:disabled),button:not(:disabled):not(.excluded)');
+                            if (shiftKey && keyCode === 9) {
+                                if (elements[0] === e.target) {
+                                    e.preventDefault();
                                     elements[elements.length - 1].focus();
-                                else
+                                }
+                            } else if (!shiftKey && keyCode === 9) {
+                                if (elements[elements.length - 1] === e.target) {
+                                    e.preventDefault();
                                     elements[0].focus();
+                                }
                             }
                         };
 
@@ -6248,11 +7148,11 @@ var app = angular.module('tru.type.lib',
                             shiftKey = e.shiftKey;
                         };
 
-                        $document[0].addEventListener('focus', focusListener, true);
+                        $document[0].addEventListener('blur', blurListener, true);
                         $document[0].addEventListener('keydown', keydownListener, true);
 
-                        scope.$on('$destroy', function() {
-                            $document[0].removeEventListener('focus', focusListener);
+                        scope.$on('$destroy', function () {
+                            $document[0].removeEventListener('blur', blurListener);
                             $document[0].removeEventListener('keydown', keydownListener);
                         });
                     }
@@ -6623,11 +7523,12 @@ var app = angular.module('tru.type.lib',
                  * @param {Date} date - Date object.
                  * @param {string} format - specifies the output format -- see angular's $filter('date').
                  */
+
                 this.formatDate = function (date, format) {
                     if (date === null)
                         return null;
                     if (isNaN(date.getTime()))
-                        return '(invalid date)';
+                        return '';
                     return $filter('date')(date, format);
                 };
             }
@@ -7164,22 +8065,17 @@ var app = angular.module('tru.type.lib',
     module.filter('stdTimeShort',
         ['$filter',
             function ($filter) {
-        return function (cfg) {
-            var v = cfg.value.$;
-            if (v === null)
-                return null;
+                return function (cfg) {
+                    var v = cfg.value.$;
+                    if (v === null)
+                        return null;
 
-            var result = {};
-            var duration = v.match(/^P([0-9]+Y|)?([0-9]+M|)?([0-9]+D|)?T?([0-9]+H|)?([0-9]+M|)?([0-9]+S|)?$/);
+                    var duration = moment.duration(v)._data;
 
-            result.hours = parseInt(duration[4] ? duration[4] : 0);
-            result.minutes = parseInt(duration[5] ? duration[5] : 0);
-            result.seconds = parseInt(duration[6] ? duration[6] : 0);
-
-            var datetime = new Date('01/01/1999 ' + result.hours + ':' + result.minutes + ':' + result.seconds);
-            return $filter('date')(datetime, 'hh:mm a');
-        };
-    }])
+                    var datetime = new Date('01/01/1999 ' + duration.hours + ':' + duration.minutes + ':' + duration.seconds);
+                    return $filter('date')(datetime, 'hh:mm a');
+                };
+            }])
 })();
 (function () {
     'use strict';
@@ -7313,7 +8209,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "           data-ng-checked=\"field.value.$\"\r" +
     "\n" +
-    "           data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "           data-std-indeterminate=\"field.type.isNullable\"\r" +
     "\n" +
@@ -7332,7 +8228,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "            <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "                   data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "                   data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "                   data-ng-trim=\"false\"\r" +
     "\n" +
@@ -7350,7 +8246,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <button data-ng-click=\"show = !show\"\r" +
     "\n" +
-    "                data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "                data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "                tabindex=\"-1\"\r" +
     "\n" +
@@ -7373,7 +8269,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "            <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "                   data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "                   data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "                   data-ng-trim=\"false\"\r" +
     "\n" +
@@ -7391,7 +8287,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <button data-ng-click=\"show = !show\"\r" +
     "\n" +
-    "                data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "                data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "                class=\"ttl-date-button\"\r" +
     "\n" +
@@ -7439,7 +8335,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "           data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "           data-ng-trim=\"false\"\r" +
     "\n" +
@@ -7466,7 +8362,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "            data-ng-change=\"onChange()\"\r" +
     "\n" +
-    "            data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "            data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "            data-ng-show=\"data.show\"\r" +
     "\n" +
@@ -7485,7 +8381,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <button data-ng-click=\"upload()\"\r" +
     "\n" +
-    "            data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "            data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "            class=\"btn btn_textOnly\">Upload</button>\r" +
     "\n" +
@@ -7529,7 +8425,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "           data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "           data-ng-trim=\"false\"\r" +
     "\n" +
@@ -7550,7 +8446,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "           data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "           data-ng-trim=\"false\"\r" +
     "\n" +
@@ -7592,7 +8488,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "           data-ng-change=\"onChange()\"\r" +
     "\n" +
-    "           data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "           data-ng-trim=\"false\"\r" +
     "\n" +
@@ -7615,7 +8511,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <textarea data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "              data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "              data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "              data-ng-trim=\"false\"\r" +
     "\n" +
@@ -7650,115 +8546,137 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "            data-tru-label-container\r" +
     "\n" +
-    "            class=\"ttl-modal\">\r" +
+    "            data-std-trap-focus\r" +
     "\n" +
-    "            <h4 style=\"margin: 0 0;\">\r" +
+    "            class=\"ttl-modal\" style=\"height:125px;min-height:0;\">\r" +
     "\n" +
-    "                {{setOrChange}} Password\r" +
+    "            <div style=\"position:absolute;top:0;left:0;right:0;height:30px;\">\r" +
     "\n" +
-    "            </h4>\r" +
+    "                <h4 style=\"margin-left: 5px;margin-top: 5px;float:left;\">\r" +
     "\n" +
-    "            <p>\r" +
+    "                    {{setOrChange}} Password\r" +
     "\n" +
-    "                <tru-label label=\"Password\">\r" +
+    "                </h4>\r" +
     "\n" +
-    "                    <input type=\"password\"\r" +
+    "                <button type=\"button\" style=\"float:right;font-size:12px;padding:0;margin-right: 5px;margin-top: 5px;\" class=\"desktop-btn desktop-btn-default desktop-window-close-button excluded\" data-ng-class=\"{'desktop-window-close-button': window.active}\" title=\"Close Dialog - [ESC]\" data-ng-click=\"cancel($event)\" tabindex=\"-1\">\r" +
     "\n" +
-    "                           data-ng-model=\"data.password\"\r" +
-    "\n" +
-    "                           data-ng-change=\"onPasswordChange()\"\r" +
-    "\n" +
-    "                           data-ng-mouseenter=\"onPasswordMouseEnter()\"\r" +
-    "\n" +
-    "                           data-ng-mouseleave=\"onPasswordMouseLeave()\"\r" +
-    "\n" +
-    "                           data-ng-keydown=\"onPasswordKeyDown($event)\"\r" +
-    "\n" +
-    "                           data-ng-class=\"{'ttl-invalid-input': errorMessage ? true : false}\"\r" +
-    "\n" +
-    "                           data-ng-focus=\"passwordIsFocused = true\"\r" +
-    "\n" +
-    "                           data-ng-blur=\"passwordIsFocused = false\"\r" +
-    "\n" +
-    "                    />\r" +
-    "\n" +
-    "                    <span class=\"ttl-invalid-indicator\" data-ng-show=\"field.editor.isEditing && errorMessage && mouseOverPassword && passwordIsFocused\">\r" +
-    "\n" +
-    "                        <i class=\"icon-warning-sign icon-white\"></i>{{errorMessage}}\r" +
-    "\n" +
-    "                    </span>\r" +
-    "\n" +
-    "                </tru-label>\r" +
-    "\n" +
-    "            </p>\r" +
-    "\n" +
-    "            <p>\r" +
-    "\n" +
-    "                <tru-label label=\"Confirm Password\">\r" +
-    "\n" +
-    "                    <input type=\"password\"\r" +
-    "\n" +
-    "                           data-ng-model=\"data.confirmPassword\"\r" +
-    "\n" +
-    "                           data-ng-change=\"onConfirmPasswordChange()\"\r" +
-    "\n" +
-    "                           data-ng-mouseenter=\"onConfirmPasswordMouseEnter()\"\r" +
-    "\n" +
-    "                           data-ng-mouseleave=\"onConfirmPasswordMouseLeave()\"\r" +
-    "\n" +
-    "                           data-ng-class=\"{'ttl-invalid-input': confirmErrorMessage ? true : false}\"\r" +
-    "\n" +
-    "                           data-ng-focus=\"confirmPasswordIsFocused = true\"\r" +
-    "\n" +
-    "                           data-ng-blur=\"confirmPasswordIsFocused = false\"\r" +
-    "\n" +
-    "                    />\r" +
-    "\n" +
-    "                    <span class=\"ttl-invalid-indicator\" data-ng-show=\"field.editor.isEditing && confirmErrorMessage && mouseOverConfirmPassword && confirmPasswordIsFocused\">\r" +
-    "\n" +
-    "                        <i class=\"icon-warning-sign icon-white\"></i>{{confirmErrorMessage}}\r" +
-    "\n" +
-    "                    </span>\r" +
-    "\n" +
-    "                </tru-label>\r" +
-    "\n" +
-    "            </p>\r" +
-    "\n" +
-    "            <p style=\"float:left;\" data-ng-if=\"field.value.$ && field.type.isNullable\">\r" +
-    "\n" +
-    "                <button data-ng-click=\"onClearClick()\"\r" +
-    "\n" +
-    "                        class=\"tvl-btn\">Clear\r" +
+    "                    <span class=\"desktop-icon-close\"></span>\r" +
     "\n" +
     "                </button>\r" +
     "\n" +
-    "            </p>\r" +
+    "            </div>\r" +
     "\n" +
-    "            <p style=\"float:right;\">\r" +
+    "            <div style=\"position:absolute;top:30px;left:0;right:0;bottom:35px;height:auto;\">\r" +
     "\n" +
-    "                <button data-ng-click=\"onOkClick()\"\r" +
+    "                <div>\r" +
     "\n" +
-    "                        data-ng-keydown=\"onOkKeyDown($event)\"\r" +
+    "                    <div>\r" +
     "\n" +
-    "                        data-ng-class=\"{'tvl-btn-primary': formIsValid}\"\r" +
+    "                        <tru-label label=\"Password\">\r" +
     "\n" +
-    "                        data-ng-disabled=\"!formIsValid\"\r" +
+    "                            <input type=\"password\"\r" +
     "\n" +
-    "                        class=\"tvl-btn\">OK\r" +
+    "                                   data-ng-model=\"data.password\"\r" +
     "\n" +
-    "                </button>\r" +
+    "                                   data-ng-change=\"onPasswordChange()\"\r" +
     "\n" +
-    "                <button data-ng-click=\"onCancelClick()\"\r" +
+    "                                   data-ng-mouseenter=\"onPasswordMouseEnter()\"\r" +
     "\n" +
-    "                        data-ng-keydown=\"onCancelKeyDown($event)\"\r" +
+    "                                   data-ng-mouseleave=\"onPasswordMouseLeave()\"\r" +
     "\n" +
-    "                        class=\"tvl-btn\"\r" +
+    "                                   data-ng-keydown=\"onPasswordKeyDown($event)\"\r" +
     "\n" +
-    "                        >Cancel\r" +
+    "                                   data-ng-class=\"{'ttl-invalid-input': errorMessage ? true : false}\"\r" +
     "\n" +
-    "                </button>\r" +
+    "                                   data-ng-focus=\"passwordIsFocused = true\"\r" +
     "\n" +
-    "            </p>\r" +
+    "                                   data-ng-blur=\"passwordIsFocused = false\"\r" +
+    "\n" +
+    "                                    />\r" +
+    "\n" +
+    "                        <span class=\"ttl-invalid-indicator\" data-ng-show=\"field.context.isEditing && errorMessage && mouseOverPassword && passwordIsFocused\">\r" +
+    "\n" +
+    "                            <i class=\"icon-warning-sign icon-white\"></i>{{errorMessage}}\r" +
+    "\n" +
+    "                        </span>\r" +
+    "\n" +
+    "                        </tru-label>\r" +
+    "\n" +
+    "                    </div>\r" +
+    "\n" +
+    "                    <div style=\"margin-top: 5px;\">\r" +
+    "\n" +
+    "                        <tru-label label=\"Confirm Password\">\r" +
+    "\n" +
+    "                            <input type=\"password\"\r" +
+    "\n" +
+    "                                   data-ng-model=\"data.confirmPassword\"\r" +
+    "\n" +
+    "                                   data-ng-change=\"onConfirmPasswordChange()\"\r" +
+    "\n" +
+    "                                   data-ng-mouseenter=\"onConfirmPasswordMouseEnter()\"\r" +
+    "\n" +
+    "                                   data-ng-mouseleave=\"onConfirmPasswordMouseLeave()\"\r" +
+    "\n" +
+    "                                   data-ng-class=\"{'ttl-invalid-input': confirmErrorMessage ? true : false}\"\r" +
+    "\n" +
+    "                                   data-ng-focus=\"confirmPasswordIsFocused = true\"\r" +
+    "\n" +
+    "                                   data-ng-blur=\"confirmPasswordIsFocused = false\"\r" +
+    "\n" +
+    "                                    />\r" +
+    "\n" +
+    "                        <span class=\"ttl-invalid-indicator\" data-ng-show=\"field.context.isEditing && confirmErrorMessage && mouseOverConfirmPassword && confirmPasswordIsFocused\">\r" +
+    "\n" +
+    "                            <i class=\"icon-warning-sign icon-white\"></i>{{confirmErrorMessage}}\r" +
+    "\n" +
+    "                        </span>\r" +
+    "\n" +
+    "                        </tru-label>\r" +
+    "\n" +
+    "                    </div>\r" +
+    "\n" +
+    "                </div>\r" +
+    "\n" +
+    "            </div>\r" +
+    "\n" +
+    "            <div style=\"position:absolute;left:0;right:0;bottom:0;height:35px;\">\r" +
+    "\n" +
+    "                <div style=\"float:right;margin-right: 5px;\">\r" +
+    "\n" +
+    "                    <button data-ng-click=\"onOkClick()\"\r" +
+    "\n" +
+    "                            data-ng-keydown=\"onOkKeyDown($event)\"\r" +
+    "\n" +
+    "                            data-ng-class=\"{'tvl-btn-primary': formIsValid}\"\r" +
+    "\n" +
+    "                            data-ng-disabled=\"!formIsValid\"\r" +
+    "\n" +
+    "                            class=\"tvl-btn\">Set\r" +
+    "\n" +
+    "                    </button>\r" +
+    "\n" +
+    "                    <button data-ng-click=\"onClearClick()\"\r" +
+    "\n" +
+    "                            data-ng-if=\"field.type.isNullable\"\r" +
+    "\n" +
+    "                            class=\"tvl-btn\">Set No Value\r" +
+    "\n" +
+    "                    </button>\r" +
+    "\n" +
+    "                    <button data-ng-click=\"onCancelClick()\"\r" +
+    "\n" +
+    "                            data-ng-keydown=\"onCancelKeyDown($event)\"\r" +
+    "\n" +
+    "                            class=\"tvl-btn\"\r" +
+    "\n" +
+    "                            >Cancel\r" +
+    "\n" +
+    "                    </button>\r" +
+    "\n" +
+    "                </div>\r" +
+    "\n" +
+    "            </div>\r" +
     "\n" +
     "        </div>\r" +
     "\n" +
@@ -7770,7 +8688,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                data-ng-keydown=\"onPasswordButtonKeyDown($event)\"\r" +
     "\n" +
-    "                data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "                data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "                data-ng-class=\"{'ttl-invalid-button': field.getValidationErrors().length > 0}\"\r" +
     "\n" +
@@ -7784,7 +8702,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        </button>\r" +
     "\n" +
-    "        <span class=\"ttl-invalid-indicator\" data-ng-show=\"field.editor.isEditing && field.getValidationErrors().length > 0 && mouseOverPasswordButton\">\r" +
+    "        <span class=\"ttl-invalid-indicator\" data-ng-show=\"field.context.isEditing && field.getValidationErrors().length > 0 && mouseOverPasswordButton\">\r" +
     "\n" +
     "            <i class=\"icon-warning-sign icon-white\"></i>Password is required.\r" +
     "\n" +
@@ -7801,7 +8719,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "           data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "           data-ng-trim=\"false\"\r" +
     "\n" +
@@ -7818,7 +8736,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
 
 
   $templateCache.put('src/templates/edit/std-record-picker-edit.html',
-    "<div class=\"ttl-password-edit-wrapper\">\r" +
+    "<div class=\"ttl-record-picker-outer-wrapper\">\r" +
     "\n" +
     "    <div\r" +
     "\n" +
@@ -7834,91 +8752,133 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "             data-ng-switch-when=\"recordPicker\"\r" +
     "\n" +
+    "             data-ng-style=\"{'height': modal.height, 'width': modal.width}\"\r" +
+    "\n" +
     "             data-tru-label-container\r" +
     "\n" +
     "             data-std-trap-focus\r" +
     "\n" +
-    "             class=\"ttl-modal\" style=\"width:700px;\">\r" +
+    "             class=\"ttl-modal\">\r" +
     "\n" +
-    "            <h4 style=\"margin: 0 0;\">\r" +
+    "            <div style=\"position:absolute;top:0;left:0;right:0;height:30px;\">\r" +
     "\n" +
-    "                Record Picker\r" +
+    "                <h4 style=\"margin-left: 5px;margin-top: 5px;float:left;\">\r" +
     "\n" +
-    "            </h4>\r" +
+    "                    {{title}} Picker\r" +
     "\n" +
-    "            <p style=\"float:right;clear:both;\">\r" +
+    "                </h4>\r" +
     "\n" +
-    "                <div std-picker-view></div>\r" +
+    "                <button type=\"button\" style=\"float:right;font-size:12px;padding:0;margin-right: 5px;margin-top: 5px;\" class=\"desktop-btn desktop-btn-default desktop-window-close-button excluded\" data-ng-class=\"{'desktop-window-close-button': window.active}\" title=\"Close Dialog - [ESC]\" data-ng-click=\"cancel($event)\" tabindex=\"-1\">\r" +
     "\n" +
-    "            </p>\r" +
-    "\n" +
-    "            <p style=\"float:left;\" data-ng-show=\"field.value.$ && field.type.isNullable\">\r" +
-    "\n" +
-    "                <button data-ng-click=\"clear()\"\r" +
-    "\n" +
-    "                        type=\"button\"\r" +
-    "\n" +
-    "                        class=\"tvl-btn\">Clear\r" +
+    "                    <span class=\"desktop-icon-close\"></span>\r" +
     "\n" +
     "                </button>\r" +
     "\n" +
-    "            </p>\r" +
+    "            </div>\r" +
     "\n" +
-    "            <p style=\"float:right;clear:both;\">\r" +
+    "            <div style=\"position:absolute;top:30px;left:0;right:0;bottom:35px\">\r" +
     "\n" +
-    "                <button data-ng-click=\"submit()\"\r" +
+    "                <div std-picker-view style=\"position:absolute;top:0;left:0;right:0;bottom:0;\"></div>\r" +
     "\n" +
-    "                        data-ng-keydown=\"submitByEnter($event)\"\r" +
+    "            </div>\r" +
     "\n" +
-    "                        data-ng-disabled=\"!selectedId\"\r" +
+    "            <div style=\"position:absolute;left:0;right:0;bottom:0;height:35px;\">\r" +
     "\n" +
-    "                        data-ng-class=\"{'tvl-btn-primary': selectedId && !searchIsFocused}\"\r" +
+    "                <div style=\"float:right;margin-right:5px;margin-top: 5px;\">\r" +
     "\n" +
-    "                        type=\"button\"\r" +
+    "                    <button data-ng-click=\"submit()\"\r" +
     "\n" +
-    "                        class=\"tvl-btn\">OK\r" +
+    "                            data-ng-keydown=\"submitByEnter($event)\"\r" +
     "\n" +
-    "                </button>\r" +
+    "                            data-ng-disabled=\"!selectedId || childSearchIsFocused\"\r" +
     "\n" +
-    "                <button data-ng-click=\"cancel($event)\"\r" +
+    "                            data-ng-class=\"{'tvl-btn-primary': selectedId && !childSearchIsFocused}\"\r" +
     "\n" +
-    "                        type=\"button\"\r" +
+    "                            type=\"button\"\r" +
     "\n" +
-    "                        class=\"tvl-btn\"\r" +
+    "                            class=\"tvl-btn\">Set\r" +
     "\n" +
-    "                        >Cancel\r" +
+    "                    </button>\r" +
     "\n" +
-    "                </button>\r" +
+    "                    <button data-ng-click=\"clear()\"\r" +
     "\n" +
-    "            </p>\r" +
+    "                            data-ng-if=\"field.type.isNullable\"\r" +
+    "\n" +
+    "                            data-ng-keydown=\"onClearKeydown($event)\"\r" +
+    "\n" +
+    "                            type=\"button\"\r" +
+    "\n" +
+    "                            title=\"Sets the value to null in the database\"\r" +
+    "\n" +
+    "                            class=\"tvl-btn\">Set No Value\r" +
+    "\n" +
+    "                    </button>\r" +
+    "\n" +
+    "                    <button data-ng-click=\"cancel($event)\"\r" +
+    "\n" +
+    "                            type=\"button\"\r" +
+    "\n" +
+    "                            class=\"tvl-btn\"\r" +
+    "\n" +
+    "                            >Cancel\r" +
+    "\n" +
+    "                    </button>\r" +
+    "\n" +
+    "                </div>\r" +
+    "\n" +
+    "            </div>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-n\" data-std-resizable data-modal=\"modal\" data-direction=\"n\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-s\" data-std-resizable data-modal=\"modal\" data-direction=\"s\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-e\" data-std-resizable data-modal=\"modal\" data-direction=\"e\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-w\" data-std-resizable data-modal=\"modal\" data-direction=\"w\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-ne\" data-std-resizable data-modal=\"modal\" data-direction=\"ne\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-nw\" data-std-resizable data-modal=\"modal\" data-direction=\"nw\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-se\" data-std-resizable data-modal=\"modal\" data-direction=\"se\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-sw\" data-std-resizable data-modal=\"modal\" data-direction=\"sw\"></span>\r" +
     "\n" +
     "        </div>\r" +
     "\n" +
     "    </div>\r" +
     "\n" +
-    "    <tru-label label=\"{{label}}\">\r" +
+    "    <tru-label field=\"field\" label=\"{{label}}\">\r" +
     "\n" +
-    "        <div class=\"ttl-record-picker-wrapper\">\r" +
+    "        <div class=\"ttl-record-picker-wrapper\" data-ng-if=\"!field.context.isGrid\">\r" +
     "\n" +
-    "            <input data-ng-model=\"data.displayValue\"\r" +
+    "            <div data-ng-mousedown=\"onInputMousedown()\" style=\"float:left;width:auto;background-color:#fff;\">\r" +
     "\n" +
-    "                   data-z-validate\r" +
+    "                <input data-ng-model=\"data.displayValue\"\r" +
     "\n" +
-    "                   disabled=\"disabled\"\r" +
+    "                       data-z-validate\r" +
     "\n" +
-    "                   type=\"text\"\r" +
+    "                       disabled=\"disabled\"\r" +
     "\n" +
-    "                    style=\"float:left;width:auto\"/>\r" +
+    "                       type=\"text\"\r" +
     "\n" +
-    "            <button data-ng-click=\"showRecordPickerModal()\"\r" +
+    "                       style=\"background-color:#fff;\"/>\r" +
     "\n" +
-    "                    data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "            </div>\r" +
+    "\n" +
+    "            <button data-ng-click=\"onClick()\"\r" +
+    "\n" +
+    "                    data-ng-keydown=\"onKeydown($event)\"\r" +
+    "\n" +
+    "                    data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit || open\"\r" +
     "\n" +
     "                    class=\"tvl-btn\"\r" +
     "\n" +
-    "                    style=\"float:left;height:20px;\"\r" +
+    "                    style=\"float:left;height:20px;width:25px;padding:0;position:relative;\"\r" +
     "\n" +
     "                    >...\r" +
+    "\n" +
+    "                <i style=\"color:green;margin-left:5px;margin-top:3px;position:absolute;z-index:5;top:0;left:-20px;\" class=\"ttl-date-button-icon icon-arrow-right animated shake\" data-ng-show=\"showArrow\"></i>\r" +
     "\n" +
     "            </button>\r" +
     "\n" +
@@ -7944,7 +8904,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "           data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "           maxlength=\"{{field.type.property.maxLength}}\"\r" +
     "\n" +
@@ -7971,9 +8931,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                   data-std-duration\r" +
     "\n" +
-    "                   data-std-duration-period=\"data.period\"\r" +
-    "\n" +
-    "                   data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "                   data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "                   data-ng-trim=\"false\"\r" +
     "\n" +
@@ -7986,16 +8944,6 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "                   class=\"text text_full ttl-time\"/>\r" +
     "\n" +
     "        </div>\r" +
-    "\n" +
-    "        <button data-ng-click=\"setPeriod()\"\r" +
-    "\n" +
-    "                data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
-    "\n" +
-    "                class=\"ttl-time-button\"\r" +
-    "\n" +
-    "                style=\"float:left\">{{data.period}}\r" +
-    "\n" +
-    "        </button>\r" +
     "\n" +
     "    </div>\r" +
     "\n" +
@@ -8034,7 +8982,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <div style=\"float:left;width:140px\">\r" +
     "\n" +
-    "            <std-masked-edit label=\"Zip\" field=\"field.children.zip\"></std-masked-edit>\r" +
+    "            <std-usa-zip-5-edit label=\"Zip\" field=\"field.children.zip\"></std-usa-zip-5-edit>\r" +
     "\n" +
     "        </div>\r" +
     "\n" +
@@ -8062,13 +9010,38 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "           data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "           data-ng-trim=\"false\"\r" +
     "\n" +
     "           data-std-usa-dollar=\"field\"\r" +
     "\n" +
     "           data-z-validate\r" +
+    "\n" +
+    "           type=\"text\"\r" +
+    "\n" +
+    "            />\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
+  $templateCache.put('src/templates/edit/std-usa-zip-5-edit.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <input data-ng-model=\"field.value.$\"\r" +
+    "\n" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
+    "\n" +
+    "           data-ng-trim=\"false\"\r" +
+    "\n" +
+    "           data-std-integer-only=\"field\"\r" +
+    "\n" +
+    "           data-z-validate\r" +
+    "\n" +
+    "           maxlength=\"5\"\r" +
+    "\n" +
+    "           placeholder=\"_____\"\r" +
     "\n" +
     "           type=\"text\"\r" +
     "\n" +
@@ -8087,7 +9060,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "               data-ng-checked=\"field.value.$\"\r" +
     "\n" +
-    "               data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "               data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "               data-std-indeterminate=\"field.type.isNullable\"\r" +
     "\n" +
@@ -8111,7 +9084,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "            data-ng-disabled=\"!field.editor.isEditing || !field.type.canEdit\"\r" +
+    "            data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
     "            data-std-indeterminate=\"field.type.isNullable\"\r" +
     "\n" +
@@ -8150,7 +9123,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <select data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "                data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "                ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "                data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "                data-ng-options=\"x.value.$ as x.label for x in choices\"\r" +
     "\n" +
@@ -8187,7 +9162,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "               data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "               data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "               data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "               data-std-indeterminate\r" +
     "\n" +
@@ -8216,7 +9193,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "               data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "               data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "               data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "               data-ng-trim=\"false\"\r" +
     "\n" +
@@ -8249,7 +9228,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                <input data-ng-model=\"data.startDate\"\r" +
     "\n" +
-    "                       data-ng-disabled=\"field.property.startValue || field.editor.isEditing\"\r" +
+    "                       data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "                       data-ng-disabled=\"field.property.startValue || field.context.isEditing\"\r" +
     "\n" +
     "                       data-ng-trim=\"false\"\r" +
     "\n" +
@@ -8275,7 +9256,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                <input data-ng-model=\"data.endDate\"\r" +
     "\n" +
-    "                       data-ng-disabled=\"field.property.endValue || field.editor.isEditing\"\r" +
+    "                       data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "                       data-ng-disabled=\"field.property.endValue || field.context.isEditing\"\r" +
     "\n" +
     "                       data-ng-trim=\"false\"\r" +
     "\n" +
@@ -8331,7 +9314,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "               data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "               data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "               data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "               data-ng-trim=\"false\"\r" +
     "\n" +
@@ -8364,7 +9349,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                <input data-ng-model=\"data.startDate\"\r" +
     "\n" +
-    "                       data-ng-disabled=\"field.property.startValue || field.editor.isEditing\"\r" +
+    "                       data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "                       data-ng-disabled=\"field.property.startValue || field.context.isEditing\"\r" +
     "\n" +
     "                       data-ng-trim=\"false\"\r" +
     "\n" +
@@ -8375,6 +9362,8 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "                       class=\"text text_full\">\r" +
     "\n" +
     "                <input data-ng-model=\"data.startDate\"\r" +
+    "\n" +
+    "                       data-ng-change=\"updateQueryPredicate()\"\r" +
     "\n" +
     "                       data-ng-disabled=\"field.property.endValue\"\r" +
     "\n" +
@@ -8402,7 +9391,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                <input data-ng-model=\"data.endDate\"\r" +
     "\n" +
-    "                       data-ng-disabled=\"field.property.endValue || field.editor.isEditing\"\r" +
+    "                       data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "                       data-ng-disabled=\"field.property.endValue || field.context.isEditing\"\r" +
     "\n" +
     "                       data-ng-trim=\"false\"\r" +
     "\n" +
@@ -8413,6 +9404,8 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "                       class=\"text text_full\">\r" +
     "\n" +
     "                <input data-ng-model=\"data.endDate\"\r" +
+    "\n" +
+    "                       data-ng-change=\"updateQueryPredicate()\"\r" +
     "\n" +
     "                       data-ng-disabled=\"field.property.endValue\"\r" +
     "\n" +
@@ -8470,7 +9463,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "               data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "               data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "               data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "               data-ng-if=\"valueIsUndefined()\"\r" +
     "\n" +
@@ -8503,7 +9498,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <select data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "                data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "                data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "                data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "                data-ng-options=\"x.value.$ as x.label for x in data.choices\"\r" +
     "\n" +
@@ -8538,7 +9535,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "               data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "               data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "               data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "               data-ng-if=\"valueIsUndefined()\"\r" +
     "\n" +
@@ -8571,7 +9570,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "               data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "               data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "               data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "               data-ng-model-options=\"{allowInvalid:true}\"\r" +
     "\n" +
@@ -8602,7 +9603,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "            <div data-ng-class=\"{'ttl-operator-icon-has-value': data.startValue}\" class=\"ttl-operator-icon-wrapper\" title=\"{{startOperatorImageMessage}}\">\r" +
     "\n" +
-    "                <i tabindex=\"-1\" class=\"ttl-operator-icon\" data-ng-class=\"startOperatorImage\" data-ng-click=\"data.startValue = undefined\"></i>\r" +
+    "                <i tabindex=\"-1\" class=\"ttl-operator-icon\" data-ng-class=\"startOperatorImage\" data-ng-click=\"onStartOperatorClick()\"></i>\r" +
     "\n" +
     "            </div>\r" +
     "\n" +
@@ -8610,7 +9611,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                <input data-ng-model=\"data.startValue\"\r" +
     "\n" +
-    "                       data-ng-disabled=\"field.property.startValue || field.editor.isEditing\"\r" +
+    "                       data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "                       data-ng-disabled=\"field.property.startValue || field.context.isEditing\"\r" +
     "\n" +
     "                       data-ng-trim=\"false\"\r" +
     "\n" +
@@ -8628,7 +9631,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "            <div data-ng-class=\"{'ttl-operator-icon-has-value': data.endValue}\" class=\"ttl-operator-icon-wrapper\" title=\"{{endOperatorImageMessage}}\">\r" +
     "\n" +
-    "                <i tabindex=\"-1\" class=\"ttl-operator-icon ttl-integer-range-query-end-icon\" data-ng-class=\"endOperatorImage\" data-ng-click=\"data.endValue = undefined\"></i>\r" +
+    "                <i tabindex=\"-1\" class=\"ttl-operator-icon ttl-integer-range-query-end-icon\" data-ng-class=\"endOperatorImage\" data-ng-click=\"onEndOperatorClick()\"></i>\r" +
     "\n" +
     "            </div>\r" +
     "\n" +
@@ -8636,7 +9639,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                <input data-ng-model=\"data.endValue\"\r" +
     "\n" +
-    "                       data-ng-disabled=\"field.property.endValue || field.editor.isEditing\"\r" +
+    "                       data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "                       data-ng-disabled=\"field.property.endValue || field.context.isEditing\"\r" +
     "\n" +
     "                       data-ng-trim=\"false\"\r" +
     "\n" +
@@ -8673,7 +9678,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                <label class=\"checkbox\">\r" +
     "\n" +
-    "                    <input class=\"ttl-or-list-checkbox\" type=\"checkbox\" data-ng-model=\"choice.checked\" data-ng-disabled=\"field.editor.isEditing\"/>{{choice.label}}\r" +
+    "                    <input class=\"ttl-or-list-checkbox\" type=\"checkbox\" data-ng-model=\"choice.checked\" data-ng-disabled=\"field.context.isEditing\" data-ng-change=\"updateQueryPredicate()\"/>{{choice.label}}\r" +
     "\n" +
     "                </label>\r" +
     "\n" +
@@ -8702,7 +9707,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "               data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "               data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "               data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "               data-ng-if=\"valueIsUndefined()\"\r" +
     "\n" +
@@ -8741,7 +9748,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                    <label class=\"checkbox\">\r" +
     "\n" +
-    "                        <input type=\"radio\" name=\"$parent.label\" data-ng-model=\"choice.checked\" data-ng-value=\"true\" data-ng-disabled=\"field.editor.isEditing\"/>{{choice.label}}\r" +
+    "                        <input type=\"radio\" name=\"$parent.label\" data-ng-model=\"choice.checked\" data-ng-value=\"true\" data-ng-disabled=\"field.context.isEditing\" data-ng-change=\"updateQueryPredicate()\"/>{{choice.label}}\r" +
     "\n" +
     "                    </label>\r" +
     "\n" +
@@ -8759,6 +9766,175 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
   );
 
 
+  $templateCache.put('src/templates/query/std-record-picker-query.html',
+    "<div class=\"ttl-record-picker-outer-wrapper\">\r" +
+    "\n" +
+    "    <div\r" +
+    "\n" +
+    "            std-modals\r" +
+    "\n" +
+    "            ng-show=\"subview\"\r" +
+    "\n" +
+    "            class=\"ttl-modals\"\r" +
+    "\n" +
+    "            ng-switch=\"subview\">\r" +
+    "\n" +
+    "        <div data-ng-controller=\"stdRecordPickerModalController\"\r" +
+    "\n" +
+    "             data-ng-switch-when=\"recordPicker\"\r" +
+    "\n" +
+    "             data-ng-style=\"{'height': modal.height, 'width': modal.width}\"\r" +
+    "\n" +
+    "             data-tru-label-container\r" +
+    "\n" +
+    "             data-std-trap-focus\r" +
+    "\n" +
+    "             class=\"ttl-modal\">\r" +
+    "\n" +
+    "            <div style=\"position:absolute;top:0;left:0;right:0;height:30px;\">\r" +
+    "\n" +
+    "                <h4 style=\"margin-left: 5px;margin-top: 5px;float:left;\">\r" +
+    "\n" +
+    "                    {{title}} Picker\r" +
+    "\n" +
+    "                </h4>\r" +
+    "\n" +
+    "                <button type=\"button\" style=\"float:right;font-size:12px;padding:0;margin-right: 5px;margin-top: 5px;\" class=\"desktop-btn desktop-btn-default desktop-window-close-button excluded\" data-ng-class=\"{'desktop-window-close-button': window.active}\" title=\"Close Dialog - [ESC]\" data-ng-click=\"cancel($event)\" tabindex=\"-1\">\r" +
+    "\n" +
+    "                    <span class=\"desktop-icon-close\"></span>\r" +
+    "\n" +
+    "                </button>\r" +
+    "\n" +
+    "            </div>\r" +
+    "\n" +
+    "            <div style=\"position:absolute;top:30px;left:0;right:0;bottom:35px\">\r" +
+    "\n" +
+    "                <div std-picker-view style=\"position:absolute;top:0;left:0;right:0;bottom:0;\"></div>\r" +
+    "\n" +
+    "            </div>\r" +
+    "\n" +
+    "            <div style=\"position:absolute;left:0;right:0;bottom:0;height:35px;\">\r" +
+    "\n" +
+    "                <div style=\"float:right;margin-right:5px;margin-top: 5px;\">\r" +
+    "\n" +
+    "                    <button data-ng-click=\"submit()\"\r" +
+    "\n" +
+    "                            data-ng-keydown=\"submitByEnter($event)\"\r" +
+    "\n" +
+    "                            data-ng-disabled=\"!selectedId || childSearchIsFocused\"\r" +
+    "\n" +
+    "                            data-ng-class=\"{'tvl-btn-primary': selectedId && !childSearchIsFocused}\"\r" +
+    "\n" +
+    "                            type=\"button\"\r" +
+    "\n" +
+    "                            class=\"tvl-btn\">Set\r" +
+    "\n" +
+    "                    </button>\r" +
+    "\n" +
+    "                    <button data-ng-click=\"clear()\"\r" +
+    "\n" +
+    "                            data-ng-if=\"field.type.isNullable\"\r" +
+    "\n" +
+    "                            data-ng-keydown=\"onClearKeydown($event)\"\r" +
+    "\n" +
+    "                            type=\"button\"\r" +
+    "\n" +
+    "                            title=\"Sets the value to null in the database\"\r" +
+    "\n" +
+    "                            class=\"tvl-btn\">Set No Value\r" +
+    "\n" +
+    "                    </button>\r" +
+    "\n" +
+    "                    <button data-ng-click=\"cancel($event)\"\r" +
+    "\n" +
+    "                            type=\"button\"\r" +
+    "\n" +
+    "                            class=\"tvl-btn\"\r" +
+    "\n" +
+    "                            >Cancel\r" +
+    "\n" +
+    "                    </button>\r" +
+    "\n" +
+    "                </div>\r" +
+    "\n" +
+    "            </div>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-n\" data-std-resizable data-modal=\"modal\" data-direction=\"n\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-s\" data-std-resizable data-modal=\"modal\" data-direction=\"s\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-e\" data-std-resizable data-modal=\"modal\" data-direction=\"e\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-w\" data-std-resizable data-modal=\"modal\" data-direction=\"w\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-ne\" data-std-resizable data-modal=\"modal\" data-direction=\"ne\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-nw\" data-std-resizable data-modal=\"modal\" data-direction=\"nw\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-se\" data-std-resizable data-modal=\"modal\" data-direction=\"se\"></span>\r" +
+    "\n" +
+    "            <span class=\"ttl-modal-resizable-handle ttl-modal-resizable-sw\" data-std-resizable data-modal=\"modal\" data-direction=\"sw\"></span>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <tru-label field=\"field\" label=\"{{label}}\">\r" +
+    "\n" +
+    "        <div class=\"ttl-record-picker-query-wrapper\">\r" +
+    "\n" +
+    "            <div style=\"float:left;height: 20px;width:19px;background-color:#fff;\">\r" +
+    "\n" +
+    "                <div data-ng-class=\"{'ttl-operator-icon-has-value': !controlValueIsUndefined() || !valueIsUndefined()}\" class=\"ttl-operator-icon-wrapper\" title=\"{{operatorImageMessage}}\">\r" +
+    "\n" +
+    "                    <i tabindex=\"-1\" class=\"ttl-operator-icon\" data-ng-class=\"operatorImage\" data-ng-click=\"onOperatorClick()\"></i>\r" +
+    "\n" +
+    "                </div>\r" +
+    "\n" +
+    "            </div>\r" +
+    "\n" +
+    "            <div data-ng-mousedown=\"onInputMousedown()\" style=\"float:left;width:auto;background-color:#fff;\">\r" +
+    "\n" +
+    "                <input data-ng-model=\"data.displayValue\"\r" +
+    "\n" +
+    "                       data-ng-if=\"valueIsUndefined()\"\r" +
+    "\n" +
+    "                       disabled=\"disabled\"\r" +
+    "\n" +
+    "                       type=\"text\"\r" +
+    "\n" +
+    "                       style=\"background-color:#fff;\"/>\r" +
+    "\n" +
+    "            </div>\r" +
+    "\n" +
+    "            <button data-ng-click=\"onClick()\"\r" +
+    "\n" +
+    "                    data-ng-keydown=\"onKeydown($event)\"\r" +
+    "\n" +
+    "                    data-ng-disabled=\"field.context.isEditing || open\"\r" +
+    "\n" +
+    "                    data-ng-if=\"valueIsUndefined()\"\r" +
+    "\n" +
+    "                    class=\"tvl-btn\"\r" +
+    "\n" +
+    "                    style=\"float:left;height:20px;width:25px;padding:0;position:relative;\"\r" +
+    "\n" +
+    "                    >...\r" +
+    "\n" +
+    "                <i style=\"color:green;margin-left:5px;margin-top:3px;position:absolute;z-index:5;top:0;left:-20px;\" class=\"ttl-date-button-icon icon-arrow-right animated shake\" data-ng-show=\"showArrow\"></i>\r" +
+    "\n" +
+    "            </button>\r" +
+    "\n" +
+    "            <p data-ng-if=\"!valueIsUndefined()\">{{data.label}}</p>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </tru-label>\r" +
+    "\n" +
+    "</div>"
+  );
+
+
   $templateCache.put('src/templates/query/std-textbox-query.html',
     "<tru-label label=\"{{label}}\">\r" +
     "\n" +
@@ -8772,7 +9948,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "               data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "               data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "               data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "               data-ng-if=\"valueIsUndefined()\"\r" +
     "\n" +
@@ -8846,7 +10024,9 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <input data-ng-model=\"field.value.$\"\r" +
     "\n" +
-    "               data-ng-disabled=\"field.editor.isEditing\"\r" +
+    "               data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "               data-ng-disabled=\"field.context.isEditing\"\r" +
     "\n" +
     "               data-ng-if=\"valueIsUndefined()\"\r" +
     "\n" +

@@ -6,12 +6,14 @@
             </div>
             <div style="padding-left:18px;">
                 <input data-ng-model="data.startDate"
-                       data-ng-disabled="field.property.startValue || field.editor.isEditing"
+                       data-ng-change="updateQueryPredicate()"
+                       data-ng-disabled="field.property.startValue || field.context.isEditing"
                        data-ng-trim="false"
                        data-std-date
                        type="text"
                        class="text text_full">
                 <input data-ng-model="data.startDate"
+                       data-ng-change="updateQueryPredicate()"
                        data-ng-disabled="field.property.endValue"
                        data-ng-trim="false"
                        data-std-time
@@ -25,12 +27,14 @@
             </div>
             <div class="ttl-integer-range-query-end-input-wrapper">
                 <input data-ng-model="data.endDate"
-                       data-ng-disabled="field.property.endValue || field.editor.isEditing"
+                       data-ng-change="updateQueryPredicate()"
+                       data-ng-disabled="field.property.endValue || field.context.isEditing"
                        data-ng-trim="false"
                        data-std-date
                        type="text"
                        class="text text_full">
                 <input data-ng-model="data.endDate"
+                       data-ng-change="updateQueryPredicate()"
                        data-ng-disabled="field.property.endValue"
                        data-ng-trim="false"
                        data-std-time

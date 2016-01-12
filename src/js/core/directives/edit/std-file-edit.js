@@ -106,7 +106,7 @@
                         iconName = 'ico-file';
                 }
 
-                var htmlIcon = '<i class="ttl-file-icon ' + iconName + '"></i>'
+                var htmlIcon = '<i class="ttl-file-icon ' + iconName + '"></i>';
                 self.renderElement.append(htmlIcon);
             };
 
@@ -162,12 +162,13 @@
                 self.setType();
             };
 
-            self.getMimeTypes = function() {
-                $scope.field.children.mimeType.queryChoices($scope).then(function (results) {
-                    self.choices = results;
-                    self.init();
-                });
+            self.getMimeTypes = function(choices) {
+                if (!choices) return;
+                self.choices = choices;
+                self.init();
             };
+
+            self.unregOnChoicesChangeForMime = $scope.field.children.mimeType.onChoicesChanged(self.getMimeTypes);
 
             $scope.noDataMessage = undefined;
 
@@ -215,6 +216,10 @@
             };
 
             $scope.$watch('field.value.data', function () { self.init(); });
+
+            $scope.$on("$destroy", function () {
+                self.unregOnChoicesChangeForMime();
+            });
         }]);
 
     module.directive('stdFileEdit',

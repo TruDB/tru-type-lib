@@ -1,6 +1,12 @@
 /* ---------------------------------------------------------------------
 Record-Picker-Edit Styles
 ------------------------------------------------------------------------ */
+.ttl-record-picker-outer-wrapper {
+    display: table;
+    width: 100%;
+}
+
 .ttl-record-picker-wrapper {
     width: 100% !important;
+    display: inline-flex;
 }

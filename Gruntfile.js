@@ -67,6 +67,13 @@ module.exports = function(grunt) {
                 dest: 'dist/',
                 flatten: false
             },
+            cssToNuget: {
+                expand: true,
+                cwd: 'build/dist/',
+                src: 'tru-type-lib.css',
+                dest: 'C:/TruDb-Development/TruDB/Main/TruDB.Generating/Intent/Examples',
+                flatten: false
+            },
             srcToDemo: {
                 expand: true,
                 cwd: 'build/dist/',
@@ -79,6 +86,20 @@ module.exports = function(grunt) {
                 cwd: 'build/dist/',
                 src: 'tru-type-lib.js',
                 dest: 'dist/',
+                flatten: false
+            },
+            srcToNuget: {
+                expand: true,
+                cwd: 'build/dist/',
+                src: 'tru-type-lib.js',
+                dest: 'C:/TruDb-Development/TruDB/Main/TruDB.Generating/Intent/Examples',
+                flatten: false
+            },
+            fontToNuget: {
+                expand: true,
+                cwd: 'fonts/',
+                src: '*.*',
+                dest: 'C:/TruDb-Development/TruDB/Main/TruDB.Generating/Intent/Examples',
                 flatten: false
             }
         },
@@ -140,9 +161,12 @@ module.exports = function(grunt) {
         'clean:templates',
         'copy:cssToDemo',
         'copy:cssToDist',
+        'copy:cssToNuget',
         //'gh-pages',
         'copy:srcToDemo',
         'copy:srcToDist',
+        'copy:srcToNuget',
+        'copy:fontToNuget',
         'clean',
         'ngdocs',
         'karma:unit',

@@ -26,6 +26,8 @@
 
                     if (!ctrlEndValueHasValue)
                         $scope.data.endDate = undefined;
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -44,30 +46,30 @@
                         else
                             $scope.data.endDate = undefined;
                     }
+
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function () {
-                    var queryPredicate = $scope.field.queryPredicate;
-                    var predicates = [];
+            $scope.updateQueryPredicate = function() {
+                var queryPredicate = $scope.field.queryPredicate;
+                var predicates = [];
 
-                    if ($scope.data.startDate) {
-                        predicates.push(queryPredicate.create('', startOperator, $scope.data.startDate));
-                    }
-
-                    if ($scope.data.endDate) {
-                        predicates.push(queryPredicate.create('', endOperator, $scope.data.endDate));
-                    }
-                    if (predicates.length) {
-                        var predicate = predicates[0];
-                        if (predicates.length > 1)
-                            predicate = predicate.and(predicates[1]);
-                        queryPredicate.set(predicate);
-                    } else
-                        queryPredicate.clear();
+                if ($scope.data.startDate) {
+                    predicates.push(queryPredicate.create('', startOperator, $scope.data.startDate));
                 }
-            }();
+
+                if ($scope.data.endDate) {
+                    predicates.push(queryPredicate.create('', endOperator, $scope.data.endDate));
+                }
+                if (predicates.length) {
+                    var predicate = predicates[0];
+                    if (predicates.length > 1)
+                        predicate = predicate.and(predicates[1]);
+                    queryPredicate.set(predicate);
+                } else
+                    queryPredicate.clear();
+            };
 
             $scope.data = {
                 startDate: undefined,
@@ -91,7 +93,6 @@
 
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
             }
         }]);
 

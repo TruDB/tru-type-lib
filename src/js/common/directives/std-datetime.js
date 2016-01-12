@@ -622,6 +622,48 @@
                             return date;
                         });
 
+                        function fillInPartialDate(val) {
+                            var dateParts = val.split(/[\s/:]+/);
+                            var period = dateParts[5];
+                            dateParts.pop();
+
+
+                            var today = new Date();
+
+                            var year = parseInt(dateParts[2]);
+                            var month = parseInt(dateParts[0]);
+                            var day = parseInt(dateParts[1]);
+                            var hour = parseInt(dateParts[3]);
+                            var minute = parseInt(dateParts[4]);
+                            var feb = year % 4 === 0 && (year % 100 || year % 400 === 0) ? 29 : 28;
+                            var monthDays = [31, feb, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+                            var numberOfDays = monthDays[month - 1];
+                            if (numberOfDays)
+                                day = (numberOfDays - day) >= 0 ? day : numberOfDays;
+
+                            year = !isNumber(year) ? today.getFullYear() : year;
+                            month = !isNumber(month) ? today.getMonth() + 1 : month;
+                            day = !isNumber(day) ? today.getDay() + 1 : day;
+                            hour = !isNumber(hour) ? 12 : hour;
+                            minute = !isNumber(minute) ? 0 : minute;
+                            return new Date(month + '/' + day + '/' + year + ' ' + hour + ':' + minute + ' ' + period);
+                        }
+
+                        scope.$on('$destroy', function () {
+                            if (scope.$parent.field.context.isGrid) {
+                                if (ngModelCtrl.$modelValue === null) {
+                                    //Do nothing
+                                } else if (Object.prototype.toString.call(ngModelCtrl.$modelValue) === "[object Date]") {
+                                    if (isNaN(ngModelCtrl.$modelValue.getTime())) {
+                                        scope.$parent.field.value.$ = fillInPartialDate(ngModelCtrl.$viewValue);
+                                    }
+                                }
+                                else {
+                                    scope.$parent.field.value.$ = fillInPartialDate(ngModelCtrl.$viewValue);
+                                }
+                            }
+                        });
                     }
                 };
             }]);

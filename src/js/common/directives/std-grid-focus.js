@@ -12,7 +12,9 @@
                     },
                     link: function (scope, element, attrs) {
                         document.addEventListener('focus', function (e) {
-                            scope.stdGridFocus = isDescendant(element[0], e.target) || e.target.tagName.toLowerCase() === 'body';
+                            //NOTE: Firefox does not support e.target
+                            var target = e.target || e.srcElement;
+                            scope.stdGridFocus = isDescendant(element[0], target) || (target.tagName && target.tagName.toLowerCase() === 'body');
                         }, true);
 
                         function isDescendant(parent, child) {

@@ -100,21 +100,21 @@ div.ttl-modals > .ttl-modal {
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     padding: 10px;
-    position: fixed;
-    left: 50%;
-    margin-left: -350px;
     top: 200px;
     width: 400px;
     z-index: 10000001;
+    overflow: hidden;
+    margin: auto auto;
+    position:relative;
+    min-height: 400px;
 }
 
 div.ttl-modals.ng-hide > .ttl-modal.ng-enter {
-    top: -200px;
     transition: 250ms ease top;
 }
 
 div.ttl-modals.ng-hide > .ttl-modal.ng-enter.ng-enter-active {
-    top: 200px;
+
 }
 /* ---------------------------------------------------------------------
 std-adorner-edit - styles
@@ -265,8 +265,14 @@ Password-Edit Styles
 /* ---------------------------------------------------------------------
 Record-Picker-Edit Styles
 ------------------------------------------------------------------------ */
+.ttl-record-picker-outer-wrapper {
+    display: table;
+    width: 100%;
+}
+
 .ttl-record-picker-wrapper {
     width: 100% !important;
+    display: inline-flex;
 }
 
 
@@ -275,18 +281,9 @@ Time-Edit Styles
 ------------------------------------------------------------------------ */
 .ttl-time {
     float: left;
-    width: 48px !important;
+    width: 100px !important;
 }
 
-.ttl-time-button {
-    background-color: #eeeeee;
-    border: 1px #cccccc solid;
-    border-left-width: 0;
-    float: left;
-    height: 20px;
-    padding: 0;
-    width: 25px;
-}
 
 /* ---------------------------------------------------------------------
 std-checkbox-list styles
@@ -382,6 +379,9 @@ std-radio-list-button-query - styles
 .ttl-radio-list-button-wrapper {
     padding-left:18px;
 }
+.ttl-record-picker-query-wrapper {
+    width: 100% !important;
+}
 /* ---------------------------------------------------------------------
 std-textbox-query - styles
 ------------------------------------------------------------------------ */
@@ -429,6 +429,111 @@ std-common - styles
     z-index: 1000;
 }
 
+.ttl-modal-resizable-nw {
+    position: absolute !important;
+    overflow: hidden;
+    width: 10px;
+    height: 10px;
+    left: -5px;
+    top: -5px;
+    z-index: 103;
+    cursor: nw-resize;
+    opacity: 0;
+}
+
+.ttl-modal-resizable-ne {
+    position: absolute !important;
+    overflow: hidden;
+    width: 10px;
+    height: 10px;
+    right: -5px;
+    top: -5px;
+    z-index: 103;
+    cursor: ne-resize;
+    opacity: 0;
+}
+
+.ttl-modal-resizable-sw {
+    position: absolute !important;
+    overflow: hidden;
+    width: 10px;
+    height: 10px;
+    left: -5px;
+    bottom: -5px;
+    z-index: 103;
+    cursor: sw-resize;
+    opacity: 0;
+}
+
+.ttl-modal-resizable-se {
+    position: absolute !important;
+    overflow: hidden;
+    width: 10px;
+    height: 10px;
+    right: -5px;
+    bottom: -5px;
+    z-index: 103;
+    cursor: se-resize;
+    opacity: 0;
+}
+
+.ttl-modal-resizable-n {
+    position: absolute !important;
+    top: 0;
+    left: 10px;
+    right: 10px;
+    overflow: hidden;
+    height: 5px;
+    z-index: 102;
+    cursor: s-resize;
+    opacity: 0;
+    margin-top: -5px;
+}
+
+.ttl-modal-resizable-s {
+    position: absolute !important;
+    left: 10px;
+    right: 10px;
+    bottom: 0;
+    overflow: hidden;
+    height: 5px;
+    z-index: 102;
+    cursor: s-resize;
+    opacity: 0;
+    margin-bottom: -5px;
+}
+
+.ttl-modal-resizable-w {
+    position: absolute !important;
+    top: 10px;
+    left: 0;
+    bottom: 10px;
+    overflow: hidden;
+    width: 5px;
+    z-index: 102;
+    cursor: w-resize;
+    opacity: 0;
+    margin-left: -5px;
+}
+
+.ttl-modal-resizable-e {
+    position: absolute !important;
+    top: 10px;
+    right: 0;
+    bottom: 10px;
+    overflow: hidden;
+    width: 5px;
+    z-index: 102;
+    cursor: e-resize;
+    opacity: 0;
+    margin-right: -5px;
+}
+
+div.ttl-modal-resizable-handle {
+    display: none !important;
+    visibility: hidden !important;
+}
+
 input[type="password"].ttl-invalid-input  {
     border: 1px solid red !important;
 }
@@ -471,17 +576,27 @@ button:focus .ttl-invalid-button  {
 .ng-invalid-invalid-date  {
     border: 1px solid red !important;
 }
+
+.an-option {
+    color: #555555;
+    font-style: normal;
+}
+
+.not-an-option {
+    color: #cbcbcb;
+    font-style: italic;
+}
 /* ---------------------------------------------------------------------
 std-font - styles
 ------------------------------------------------------------------------ */
 
 @font-face {
     font-family: 'icomoon';
-    src:url('../fonts/icomoon.eot?806wmd');
-    src:url('../fonts/icomoon.eot?#iefix806wmd') format('embedded-opentype'),
-    url('../fonts/icomoon.woff?806wmd') format('woff'),
-    url('../fonts/icomoon.ttf?806wmd') format('truetype'),
-    url('../fonts/icomoon.svg?806wmd#icomoon') format('svg');
+    src:url('icomoon.eot?806wmd');
+    src:url('icomoon.eot?#iefix806wmd') format('embedded-opentype'),
+    url('icomoon.woff?806wmd') format('woff'),
+    url('icomoon.ttf?806wmd') format('truetype'),
+    url('icomoon.svg?806wmd#icomoon') format('svg');
     font-weight: normal;
     font-style: normal;
 }
@@ -498,6 +613,7 @@ std-font - styles
     /* Better Font Rendering =========== */
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    cursor: default;
 }
 
 .ico-end-with:before {

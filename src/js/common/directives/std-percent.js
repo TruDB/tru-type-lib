@@ -34,7 +34,7 @@
                         }
 
                         ngModelCtrl.$formatters.push(function (val) {
-                            return (val * 100) + '%';
+                            return (val * 100).toFixed(2) + '%';
                         });
 
                         ngModelCtrl.$parsers.push(function (val) {

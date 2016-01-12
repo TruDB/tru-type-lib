@@ -4,7 +4,8 @@
     </div>
     <div style="padding-left:18px;">
         <select data-ng-model="field.value.$"
-                data-ng-disabled="field.editor.isEditing"
+                ng-change="updateQueryPredicate()"
+                data-ng-disabled="field.context.isEditing"
                 data-ng-options="x.value.$ as x.label for x in choices"
                 data-ng-if="valueIsUndefined()"
                 std-select-value-converter

@@ -27,11 +27,11 @@
 
                         angular.element(input).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
-                            if (!scope.field.isListContext) {
+                            if (!scope.field.context.isGrid) {
                                 input.select();
                             }
 
-                            if (scope.field.isListContext) {
+                            if (scope.field.context.isGrid) {
                                 scope.$apply(function () {
                                     scope.field.value.$ = !scope.field.value.$;
                                 });

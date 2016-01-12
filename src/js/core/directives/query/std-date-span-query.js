@@ -33,7 +33,7 @@
                             startLabel.remove();
                             endLabel.remove();
 
-                            var onPredicateCB = function () {
+                            var onPredicateCB = function() {
                                 return function () {
                                     var predicates = [];
                                     var queryPredicate = scope.field.queryPredicate;
@@ -45,9 +45,9 @@
                                         var startStartValue = new Date(start.toUTCString());
                                         var startEndValue = new Date(end.toUTCString());
 
-                                        startStartValue.setHours(0,0,0,0);
+                                        startStartValue.setHours(0, 0, 0, 0);
                                         predicates.push(queryPredicate.create('Start', 'ge', startStartValue));
-                                        startEndValue.setHours(23,59,59,999);
+                                        startEndValue.setHours(23, 59, 59, 999);
                                         predicates.push(queryPredicate.create('Start', 'le', startEndValue));
 
                                         if (predicates.length) {
@@ -72,7 +72,6 @@
                                     } else {
                                         queryPredicate.clear();
                                     }
-
                                 }
                             }();
 

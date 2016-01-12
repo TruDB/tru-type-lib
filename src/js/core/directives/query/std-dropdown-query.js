@@ -10,11 +10,13 @@
             var ctrlValueHasValue = typeof ctrlValue !== 'undefined';
             var ctrlDefaultHasValue = typeof ctrlDefault !== 'undefined';
             var operator = operatorLookup[$scope.field.property.operator].operator;
+            var unregOnChoicesChange = undefined;
 
             var onClearCB = function(){
                 return function() {
                     if (ctrlValueHasValue) return;
                     $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
@@ -25,20 +27,47 @@
                         $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
                     else
                         $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
                 }
             }();
 
-            var onPredicateCB = function() {
-                return function() {
-                    var value = $scope.field.value.$;
-                    var queryPredicate = $scope.field.queryPredicate;
-                    if (typeof value !== 'undefined') {
-                        queryPredicate.set('', operator, value);
-                    } else {
-                        queryPredicate.clear();
-                    }
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                if (typeof value !== 'undefined') {
+                    queryPredicate.set('', operator, value);
+                } else {
+                    queryPredicate.clear();
                 }
-            }();
+            };
+
+            $scope.data = {
+                choices: [],
+                label: undefined
+            };
+
+            var loadChoices = function(choices) {
+                if (choices == null) return;
+                $scope.data.choices = angular.copy(choices);
+
+                $scope.data.choices.unshift({label: '', value: {$: undefined}});
+
+                if ($scope.field.type.isNullable) {
+                    $scope.data.choices.push({label: 'Null', value: {$: 'null'}});
+                }
+
+                if (ctrlValueHasValue) {
+                    $scope.data.label = $scope.data.choices.filter(function (obj) {
+                        return obj.value.$ === ctrlValue;
+                    })[0].label;
+                    $scope.field.value.$ = util.tryParseInt(ctrlValue, ctrlValue);
+                } else if (ctrlDefaultHasValue)
+                    $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
+                else
+                    $scope.field.value.$ = undefined;
+
+                $scope.updateQueryPredicate();
+            };
 
             $scope.valueIsUndefined = function () {
                 return (typeof ctrlValue === 'undefined');
@@ -49,49 +78,30 @@
             };
 
             $scope.onOperatorClick = function() {
-                if (ctrlValueHasValue || $scope.field.editor.isEditing) return;
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
                 $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
             };
 
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
             $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
 
-
-            $scope.data = {
-                choices: [],
-                label: undefined
-            };
-
             if(ctrlValue === null) {
                 $scope.data.label = 'Null';
                 $scope.field.value.$ = null;
+                $scope.updateQueryPredicate();
             } else {
-                $scope.field.queryChoices($scope).then(function (results) {
-                    $scope.data.choices = angular.copy(results);
-
-                    $scope.data.choices.unshift({label: '', value: {$: undefined}});
-
-                    if ($scope.field.type.isNullable) {
-                        $scope.data.choices.push({label: 'Null', value: {$: 'null'}});
-                    }
-
-                    if (ctrlValueHasValue) {
-                        $scope.data.label = $scope.data.choices.filter(function (obj) {
-                            return obj.value.$ === ctrlValue;
-                        })[0].label;
-                        $scope.field.value.$ = util.tryParseInt(ctrlValue, ctrlValue);
-                    } else if (ctrlDefaultHasValue)
-                        $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
-                    else
-                        $scope.field.value.$ = undefined;
-                });
+                unregOnChoicesChange = $scope.field.onChoicesChanged(loadChoices);
             }
+
+            $scope.$on("$destroy", function () {
+                unregOnChoicesChange();
+            });
 
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
-                $scope.searchGroupCtrl.registerPredicate(onPredicateCB);
-            }
+            };
         }]);
 
     module.directive('stdDropdownQuery',
@@ -118,6 +128,7 @@
                                         scope.field.value.$ = undefined;
                                     }
                                 }
+                                scope.updateQueryPredicate();
                             });
                         });
 

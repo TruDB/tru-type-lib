@@ -21,6 +21,7 @@ var app = angular.module('tru.type.lib',
         'std.textbox.edit',
         'std.usa.address.edit',
         'std.usa.dollar.edit',
+        'std.usa.zip.5.edit',
         'std.record.picker.edit',
 
         //Search Controls
@@ -41,6 +42,7 @@ var app = angular.module('tru.type.lib',
         'std.usa.address.query',
         'std.usa.dollar.query',
         'std.boolean.dropdown.query',
+        'std.record.picker.query',
 
         //List Controls
         'std.checkbox.list',
@@ -53,6 +55,7 @@ var app = angular.module('tru.type.lib',
         'std.trap.focus',
         'std.grid.focus',
         'std.search.focus',
+        'std.resizable',
 
         //Services
         'std.date',

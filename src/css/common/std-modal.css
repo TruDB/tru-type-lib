@@ -26,19 +26,19 @@ div.ttl-modals > .ttl-modal {
     box-sizing: border-box;
     -moz-box-sizing: border-box;
     padding: 10px;
-    position: fixed;
-    left: 50%;
-    margin-left: -350px;
     top: 200px;
     width: 400px;
     z-index: 10000001;
+    overflow: hidden;
+    margin: auto auto;
+    position:relative;
+    min-height: 400px;
 }
 
 div.ttl-modals.ng-hide > .ttl-modal.ng-enter {
-    top: -200px;
     transition: 250ms ease top;
 }
 
 div.ttl-modals.ng-hide > .ttl-modal.ng-enter.ng-enter-active {
-    top: 200px;
+
 }

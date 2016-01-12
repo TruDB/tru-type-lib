@@ -4,7 +4,8 @@
     </div>
     <div style="padding-left:18px;">
         <input data-ng-model="field.value.$"
-               data-ng-disabled="field.editor.isEditing"
+               data-ng-change="updateQueryPredicate()"
+               data-ng-disabled="field.context.isEditing"
                data-ng-trim="false"
                data-std-date
                type="text"

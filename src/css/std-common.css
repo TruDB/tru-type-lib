@@ -37,6 +37,111 @@ std-common - styles
     z-index: 1000;
 }
 
+.ttl-modal-resizable-nw {
+    position: absolute !important;
+    overflow: hidden;
+    width: 10px;
+    height: 10px;
+    left: -5px;
+    top: -5px;
+    z-index: 103;
+    cursor: nw-resize;
+    opacity: 0;
+}
+
+.ttl-modal-resizable-ne {
+    position: absolute !important;
+    overflow: hidden;
+    width: 10px;
+    height: 10px;
+    right: -5px;
+    top: -5px;
+    z-index: 103;
+    cursor: ne-resize;
+    opacity: 0;
+}
+
+.ttl-modal-resizable-sw {
+    position: absolute !important;
+    overflow: hidden;
+    width: 10px;
+    height: 10px;
+    left: -5px;
+    bottom: -5px;
+    z-index: 103;
+    cursor: sw-resize;
+    opacity: 0;
+}
+
+.ttl-modal-resizable-se {
+    position: absolute !important;
+    overflow: hidden;
+    width: 10px;
+    height: 10px;
+    right: -5px;
+    bottom: -5px;
+    z-index: 103;
+    cursor: se-resize;
+    opacity: 0;
+}
+
+.ttl-modal-resizable-n {
+    position: absolute !important;
+    top: 0;
+    left: 10px;
+    right: 10px;
+    overflow: hidden;
+    height: 5px;
+    z-index: 102;
+    cursor: s-resize;
+    opacity: 0;
+    margin-top: -5px;
+}
+
+.ttl-modal-resizable-s {
+    position: absolute !important;
+    left: 10px;
+    right: 10px;
+    bottom: 0;
+    overflow: hidden;
+    height: 5px;
+    z-index: 102;
+    cursor: s-resize;
+    opacity: 0;
+    margin-bottom: -5px;
+}
+
+.ttl-modal-resizable-w {
+    position: absolute !important;
+    top: 10px;
+    left: 0;
+    bottom: 10px;
+    overflow: hidden;
+    width: 5px;
+    z-index: 102;
+    cursor: w-resize;
+    opacity: 0;
+    margin-left: -5px;
+}
+
+.ttl-modal-resizable-e {
+    position: absolute !important;
+    top: 10px;
+    right: 0;
+    bottom: 10px;
+    overflow: hidden;
+    width: 5px;
+    z-index: 102;
+    cursor: e-resize;
+    opacity: 0;
+    margin-right: -5px;
+}
+
+div.ttl-modal-resizable-handle {
+    display: none !important;
+    visibility: hidden !important;
+}
+
 input[type="password"].ttl-invalid-input  {
     border: 1px solid red !important;
 }
@@ -78,4 +183,14 @@ button:focus .ttl-invalid-button  {
 
 .ng-invalid-invalid-date  {
     border: 1px solid red !important;
+}
+
+.an-option {
+    color: #555555;
+    font-style: normal;
+}
+
+.not-an-option {
+    color: #cbcbcb;
+    font-style: italic;
 }
