@@ -111,7 +111,7 @@
                                 focusedValue = scope.field.value.$;
 
                             if (e.keyCode === 27) {
-                                scope.field.value.$ = focusedValue;
+                                //scope.field.value.$ = focusedValue;
                                 //ngModelCtrl.$setValidity('invalid-time', true);
                                 //ngModelCtrl.$setViewValue($filter('date')(new Date(focusedValue), 'MM/dd/yyyy hh:mm a'));
                                 //ngModelCtrl.$render();
@@ -333,10 +333,12 @@
                         });
 
                         element.bind('focus', function (e) {
-                            if (!focusedValue && focusedValue !== null)
-                                focusedValue = scope.field.value.$;
+
 
                             $timeout(function () {
+                                if (!focusedValue && focusedValue !== null)
+                                    focusedValue = scope.field.value.$;
+
                                 if (externalEvent) {
                                     externalEvent = false;
                                     return;

@@ -1,8 +1,11 @@
 <tru-label label="{{label}}" field="field">
     <input data-ng-model="field.value.$"
-           data-ng-checked="field.value.$"
            data-ng-disabled="!field.context.isEditing || !field.type.canEdit"
-           data-std-indeterminate="field.type.isNullable"
+           data-ng-trim="false"
+           data-std-zip
            data-z-validate
-           type="checkbox">
+           maxlength="10"
+           placeholder="_________"
+           type="text"
+            />
 </tru-label>

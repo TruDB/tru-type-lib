@@ -29,13 +29,14 @@
                     link: function(scope, element) {
                         var oldValue;
                         var input = element[0].querySelectorAll('input')[0];
+                        var maxLength = scope.field.type.property.maxLength ? scope.field.type.property.maxLength : 0;
 
                         angular.element(input).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
                             if (!scope.field.context.isGrid) {
-                                $timeout(function() {
+                                //$timeout(function() {
                                     input.select();
-                                });
+                                //});
                             }
                         });
 
@@ -44,6 +45,20 @@
                                 scope.field.value.$ = oldValue;
                                 input.blur();
                             }
+                        });
+
+                        angular.element(input).bind('paste', function (e) {
+                            e.preventDefault();
+                            var caretPos =  input.selectionStart;
+                            var caretEnd = input.selectionEnd;
+                            var txt = scope.field.value.$ ? scope.field.value.$ : '';
+                            var result;
+
+                            if (e.originalEvent.clipboardData)
+                                result = (txt.substring(0, caretPos) + e.originalEvent.clipboardData.getData('text').split('\n').join('') + txt.substring(caretEnd)).substring(0, maxLength);
+                            else
+                                result = (txt.substring(0, caretPos) + window.clipboardData.getData('text').split('\n').join('') + txt.substring(caretEnd)).substring(0, maxLength);
+                            scope.field.value.$ = result;
                         });
 
                         display.setVisibility(element, scope.field.type.canDisplay);

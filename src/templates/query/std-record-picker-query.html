@@ -61,12 +61,13 @@
                     <i tabindex="-1" class="ttl-operator-icon" data-ng-class="operatorImage" data-ng-click="onOperatorClick()"></i>
                 </div>
             </div>
-            <div data-ng-mousedown="onInputMousedown()" style="float:left;width:auto;background-color:#fff;">
+            <div data-ng-mousedown="onInputMousedown()" style="float:left;width: calc(100% - 25px);background-color:#fff;">
                 <input data-ng-model="data.displayValue"
                        data-ng-if="valueIsUndefined()"
+                       data-ng-disabled="field.context.isEditing || open"
                        disabled="disabled"
                        type="text"
-                       style="background-color:#fff;"/>
+                       />
             </div>
             <button data-ng-click="onClick()"
                     data-ng-keydown="onKeydown($event)"

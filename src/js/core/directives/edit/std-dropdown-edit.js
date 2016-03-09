@@ -55,6 +55,10 @@
                             self.updateData();
                             self.updateOptions();
                         });
+                    } else {
+                        $scope.choices = choices;
+                        self.updateData();
+                        self.updateOptions();
                     }
                 } else {
                     $scope.choices = choices;

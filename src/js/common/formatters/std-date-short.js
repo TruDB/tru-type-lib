@@ -10,7 +10,8 @@
                     var v = cfg.value.$;
                     if (v === null)
                         return null;
-                    return stdFilter.formatDate(v, 'MM/dd/yyyy');
+                    var utc = new Date(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate());
+                    return stdFilter.formatDate(utc, 'MM/dd/yyyy');
                 };
             }])
 })();

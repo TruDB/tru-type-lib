@@ -1,0 +1,11 @@
+<tru-label label="{{label}}" field="field.phone">
+    <div style="height:18px;width:50px;background-color:#efefef;float:left;border:#cccccc 1px solid">{{data.dialCode}}</div>
+    <input data-ng-model="field.phone.value.$"
+           data-ng-disabled="!field.phone.context.isEditing || !field.phone.type.canEdit"
+           maxlength="{{field.phone.type.property.maxLength}}"
+           data-ng-trim="false"
+           data-z-validate
+           style="border-left-width: 0px;float: left;width: 200px;"
+           type="text"
+            />
+</tru-label>

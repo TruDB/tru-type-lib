@@ -46,9 +46,12 @@
                             }
                         });
 
-                        if (scope.field.value.$ === null && !isNullable && !ctrlDefault) {
-                            scope.field.value.$ = false;
-                        }
+                        scope.$watch('field.value.$', function () {
+                            if (!isNullable && scope.field.value.$ === null)
+                                input.indeterminate = true;
+                            else
+                                input.indeterminate = false;
+                        });
 
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }

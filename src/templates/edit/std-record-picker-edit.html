@@ -56,12 +56,10 @@
     </div>
     <tru-label field="field" label="{{label}}">
         <div class="ttl-record-picker-wrapper" data-ng-if="!field.context.isGrid">
-            <div data-ng-mousedown="onInputMousedown()" style="float:left;width:auto;background-color:#fff;">
-                <input data-ng-model="data.displayValue"
-                       data-z-validate
-                       disabled="disabled"
-                       type="text"
-                       style="background-color:#fff;"/>
+            <div data-ng-mousedown="onInputMousedown()" style="float:left;width: calc(100% - 25px);background-color:#fff;">
+                <div class="ttl-record-picker-display-value">
+                    <a data-ng-click="field.goTo()" href="#">{{data.displayValue}}</a>
+                </div>
             </div>
             <button data-ng-click="onClick()"
                     data-ng-keydown="onKeydown($event)"

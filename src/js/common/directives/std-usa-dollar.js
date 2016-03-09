@@ -20,6 +20,10 @@
 
                         var wholePlaces = 38 - decimalPlaces;
 
+                        ngModelCtrl.$formatters.push(function (val) {
+                            return '$' + val.toFixed(2);
+                        });
+
                         ngModelCtrl.$parsers.push(function (val) {
                             if (element[0] !== $document[0].activeElement) return ngModelCtrl.$modelValue;
                             var number = Number(val).toPrecision();

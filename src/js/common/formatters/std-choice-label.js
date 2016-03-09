@@ -8,9 +8,13 @@
             return function(cfg) {
                 if (cfg.value.$ === null)
                     return null;
-                var item = cfg.type.choices.filter(function (c) {
-                    return c.value.$ === cfg.value.$;
-                });
+                if (cfg.type) {
+                    var item = cfg.type.choices.filter(function (c) {
+                        return c.value.$ === cfg.value.$;
+                    });
+                } else {
+                    return cfg.value.$
+                }
 
                 if (item.length == 0)
                     return null;

@@ -1,0 +1,42 @@
+<tru-label label="{{label}}" field="field">
+    <div style="width:100%;">
+        <div style="float:left;width:105px">
+            <div style="height:20px">
+                <!--<div style="float:left;position:relative;top:50%;transform:translateY(-50%);margin-right:3px;width:20px;" class="iti-flag" data-ng-class="field.children.countryCode.value.$"></div>-->
+                <select data-ng-model="data.selectedCountry"
+                        data-ng-options="x as x.name for x in countries"
+                        data-ng-change="onCountryCodeChange(data.selectedCountry)"
+                        data-ng-disabled="!field.children.countryCode.context.isEditing || !field.children.countryCode.type.canEdit"
+                        class="ttl-dropdown-edit dropdown control"
+                        style="float:left;width:100px;">
+                </select>
+            </div>
+        </div>
+        <div style="float:left;width: calc(100% - 220px);">
+            <i tabindex="-1" class="icon-phone" style="float:left;margin-right: 3px;margin-left: 0px;margin-top: 2px;"></i>
+            <div style="height:18px;width:50px;background-color:#efefef;float:left;border:#cccccc 1px solid;text-align:center;line-height:18px;">+{{field.property.dialCode}}</div>
+            <input data-ng-model="field.children.phone.value.$"
+                   data-ng-disabled="!field.children.phone.context.isEditing || !field.children.phone.type.canEdit"
+                   data-std-intl-phone
+                   data-ng-trim="false"
+                   data-z-validate
+                   style="border-left-width: 0px;float: left;width: calc(100% - 70px);"
+                   type="text"
+                    />
+        </div>
+        <div style="float:left;width:115px">
+            <div style="float:left;margin-right: 1px;margin-left: 3px;width:10px;margin-top:5px;">x</div>
+            <input data-ng-model="field.children.extension.value.$"
+                   data-ng-disabled="!field.children.extension.context.isEditing || !field.children.extension.type.canEdit"
+                   data-std-number-only
+                   maxlength="{{field.children.extension.type.property.maxLength}}"
+                   data-ng-trim="false"
+                   data-z-validate
+                   style="float: left;width: 100px;"
+                   type="text"
+                    />
+        </div>
+    </div>
+</tru-label>
+
+

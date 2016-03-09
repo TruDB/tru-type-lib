@@ -3,8 +3,8 @@
 
     var module = angular.module('std.or.list.checkbox.query', []);
 
-    module.controller('stdOrListCheckboxQueryController', ['$scope', 'stdOperatorLookup',
-        function ($scope, operatorLookup) {
+    module.controller('stdOrListCheckboxQueryController', ['$scope', 'stdOperatorLookup', 'stdUtil',
+        function ($scope, operatorLookup, util) {
             var ctrlValue = $scope.field.property.value ? $scope.field.property.value : [];
             var ctrlDefault = $scope.field.property.default ? $scope.field.property.default : [];
             var ctrlValueHasValue = ctrlValue.length > 0;
@@ -54,6 +54,7 @@
             };
 
             var loadChoices = function(choices) {
+                if (choices == null) return;
                 angular.forEach(choices, function (choice) {
                     if (ctrlValueHasValue) {
                         if (ctrlValue.indexOf(choice.value.$) !== -1) {
@@ -61,7 +62,7 @@
                             choice["checked"] = true;
                         }
                     } else if (ctrlDefaultHasValue) {
-                        choice["checked"] = ctrlDefault.indexOf(choice.value.$) !== -1;
+                        choice["checked"] = ctrlDefault.indexOf(choice.value.$.toString()) !== -1;
                     } else {
                         choice["checked"] = false;
                     }
@@ -100,6 +101,7 @@
                         choice.checked = true;
                     });
                 }
+                $scope.updateQueryPredicate();
             };
 
             $scope.$watch('data.choices', function () {

@@ -33,8 +33,12 @@
                     }
                 }
             }
-            if (cfg.zip.value.$ !== null)
-                text += cfg.zip.value.$;
+            if (cfg.zip.value.$ !== null) {
+                if (cfg.zip.value.$.length > 5)
+                    text += cfg.zip.value.$.substring(0, 5) + '-' + cfg.zip.value.$.substring(5);
+                else
+                    text += cfg.zip.value.$;
+            }
             return text;
         };
     }])

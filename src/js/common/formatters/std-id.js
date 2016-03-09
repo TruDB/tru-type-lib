@@ -5,7 +5,9 @@
 
     module.filter('stdId', [function () {
         return function (cfg) {
-            return cfg.recordId();
+            if (typeof cfg.recordId === 'function')
+                return cfg.recordId();
+            return cfg.value.$;
         };
     }])
 })();

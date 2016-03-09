@@ -19,10 +19,18 @@ var app = angular.module('tru.type.lib',
         'std.percent.edit',
         'std.text.edit',
         'std.textbox.edit',
+        'std.intl.address.basic.edit',
+        'std.intl.address.edit',
+        'std.intl.phone.number.edit',
+        'std.na.phone.edit',
         'std.usa.address.edit',
+        'std.usa.address.zip.9.edit',
         'std.usa.dollar.edit',
         'std.usa.zip.5.edit',
+        'std.usa.zip.9.edit',
         'std.record.picker.edit',
+        'std.intl.phone.edit',
+        'std.country.code.edit',
 
         //Search Controls
         'std.checkbox.query',
@@ -39,6 +47,8 @@ var app = angular.module('tru.type.lib',
         'std.or.list.checkbox.query',
         'std.radio.list.button.query',
         'std.textbox.query',
+        'std.intl.address.basic.query',
+        'std.intl.address.query',
         'std.usa.address.query',
         'std.usa.dollar.query',
         'std.boolean.dropdown.query',
@@ -66,6 +76,7 @@ var app = angular.module('tru.type.lib',
         'std.decimal',
         'std.duration',
         'std.integer.only',
+        'std.number.only',
         'std.mask',
         'std.max',
         'std.file.change',
@@ -79,7 +90,11 @@ var app = angular.module('tru.type.lib',
         'std.select.value.converter',
         'std.filter',
         'std.percent',
-        'std.modal'
+        'std.modal',
+        'std.zip',
+        'std.na.phone',
+        'std.countries',
+        'std.intl.phone',
     ]);
 (function () {
     'use strict';
@@ -185,10 +200,47 @@ var app = angular.module('tru.type.lib',
                             }
                         });
 
-                        if (scope.field.value.$ === null && !isNullable && !ctrlDefault) {
-                            scope.field.value.$ = false;
-                        }
+                        scope.$watch('field.value.$', function () {
+                            if (!isNullable && scope.field.value.$ === null)
+                                input.indeterminate = true;
+                            else
+                                input.indeterminate = false;
+                        });
 
+                        display.setVisibility(element, scope.field.type.canDisplay);
+                    }
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.country.code.edit', []);
+
+    module.directive('stdCountryCodeEdit',
+        ['$templateCache', 'stdDisplay', 'stdCountries',
+            function($templateCache, display, countries) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    template: $templateCache.get('src/templates/edit/std-country-code-edit.html'),
+                    link: function(scope, element) {
+                        var countryCode = scope.field.value.$ | 'us';
+
+                        scope.countries = countries.allCountries;
+                        scope.data = {
+                            value: 0,
+                            selectedCountry: _.find(countries, function(country) { return country.iso2 === countryCode }),
+                            selectedCountryIso2: countryCode
+                        };
+                        scope.onChange = function(country) {
+                            scope.data.selectedCountryIso2 = country.iso2;
+                            scope.field.value.$ = country.iso2;
+                        };
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -441,6 +493,10 @@ var app = angular.module('tru.type.lib',
                             self.updateData();
                             self.updateOptions();
                         });
+                    } else {
+                        $scope.choices = choices;
+                        self.updateData();
+                        self.updateOptions();
                     }
                 } else {
                     $scope.choices = choices;
@@ -842,6 +898,187 @@ var app = angular.module('tru.type.lib',
 (function(){
     'use strict';
 
+    var module = angular.module('std.intl.address.basic.edit', []);
+
+    module.directive('stdIntlAddressBasicEdit',
+        ['$templateCache', 'stdDisplay',
+            function($templateCache, display) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    template: $templateCache.get('src/templates/edit/std-intl-address-basic-edit.html'),
+                    link: {
+                        //pre: function (scope, element) {
+                        //    scope.field.children.zip.property.entryFilter = scope.field.property.zipEntryFilter;
+                        //    scope.field.children.zip.property.watermark = scope.field.property.zipWatermark;
+                        //},
+                        post: function(scope, element) {
+                            var stateProvinceLabel = angular.element(element[0].querySelectorAll('label')[4]);
+                            var postalCodeLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            stateProvinceLabel.addClass('ttl-no-label-width');
+                            postalCodeLabel.addClass('ttl-no-label-width');
+                            display.setVisibility(element, scope.field.type.canDisplay);
+                        }
+                    }
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.intl.address.edit', []);
+
+    module.directive('stdIntlAddressEdit',
+        ['$templateCache', 'stdDisplay',
+            function($templateCache, display) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    template: $templateCache.get('src/templates/edit/std-intl-address-edit.html'),
+                    link: {
+                        //pre: function (scope, element) {
+                        //    scope.field.children.zip.property.entryFilter = scope.field.property.zipEntryFilter;
+                        //    scope.field.children.zip.property.watermark = scope.field.property.zipWatermark;
+                        //},
+                        post: function(scope, element) {
+                            var stateProvinceLabel = angular.element(element[0].querySelectorAll('label')[4]);
+                            var postalCodeLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            stateProvinceLabel.addClass('ttl-no-label-width');
+                            postalCodeLabel.addClass('ttl-no-label-width');
+                            display.setVisibility(element, scope.field.type.canDisplay);
+
+                            scope.showStateProvinceText = true;
+
+                            scope.$watch('scope.field.children.country', function(newValue, oldValue) {
+                                if (newValue === oldValue) return;
+                                if (newValue === 'USA' || newValue === 'CAD')
+                                    scope.showStateProvinceText = false;
+                                else
+                                    scope.showStateProvinceText = true;
+
+                                scope.field.children.stateProvince = undefined;
+                            })
+                        }
+                    }
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.intl.phone.edit', []);
+
+    module.directive('stdIntlPhoneEdit',
+        ['$templateCache', 'stdDisplay', 'stdCountries',
+            function($templateCache, display, countries) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    template: $templateCache.get('src/templates/edit/std-intl-phone-edit.html'),
+                    link: function (scope, element) {
+
+                        function updateValue() {
+                            var country, dialCode;
+                            if (scope.field.children.countryCode.value.$) {
+                                country = _.find(countries.allCountries, function (country) { return country.iso2 === scope.field.children.countryCode.value.$ });
+                                dialCode = country.dialCode;
+                            } else {
+                                country = _.find(countries.allCountries, function (country) {
+                                    return country.iso2 === scope.field.property.countryCode;
+                                });
+                                dialCode = country.dialCode;
+                            }
+                            scope.countries = countries.allCountries;
+                            scope.data = {
+                                value: 0,
+                                selectedCountry: country,
+                                selectedCountryIso2: country.iso2,
+                                dialCode: dialCode
+                            };
+                            scope.field.property.dialCode = country.dialCode;
+                            scope.onCountryCodeChange = function (country) {
+                                scope.field.children.countryCode.value.$ = country.iso2;
+                                scope.field.property.dialCode = country.dialCode;
+                                scope.field.children.phone.value.$ = undefined;
+                            };
+                        }
+
+                        updateValue();
+
+                        scope.$watch('field.children.phone.value.$', function () { updateValue() });
+
+                        display.setVisibility(element, scope.field.type.canDisplay);
+                    }
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.intl.phone.number.edit', []);
+
+    module.directive('stdIntlPhoneNumberEdit',
+        ['$templateCache', '$timeout', 'stdDisplay',
+            function($templateCache, $timeout, display) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    template: $templateCache.get('src/templates/edit/std-intl-phone-number-edit.html'),
+                    link: function(scope, element) {
+                        scope.data = {
+                          dialCode: 1
+                        };
+                        scope.$watch('field.countryCode.value.$', function() {
+
+                        });
+
+                        display.setVisibility(element, scope.field.phone.type.canDisplay);
+                    }
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.intl.state.province.edit', []);
+
+    module.directive('stdIntlStateProvinceEdit',
+        ['$templateCache', 'stdDisplay',
+            function($templateCache, display) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    template: $templateCache.get('src/templates/edit/std-intl-address-edit.html'),
+                    link: function(scope, element, attrs) {
+
+                        display.setVisibility(element, scope.field.type.canDisplay);
+                    }
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
     var module = angular.module('std.link.edit', []);
 
     module.directive('stdLinkEdit',
@@ -855,6 +1092,9 @@ var app = angular.module('tru.type.lib',
                     },
                     template: $templateCache.get('src/templates/edit/std-link-edit.html'),
                     link: function(scope, element) {
+                        scope.goTo = function() {
+
+                        };
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -931,6 +1171,28 @@ var app = angular.module('tru.type.lib',
                             }
                         });
 
+                        display.setVisibility(element, scope.field.type.canDisplay);
+                    }
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.na.phone.edit', []);
+
+    module.directive('stdNaPhoneEdit',
+        ['$templateCache', 'stdDisplay',
+            function($templateCache, display) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    template: $templateCache.get('src/templates/edit/std-na-phone-edit.html'),
+                    link: function(scope, element) {
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -1359,13 +1621,14 @@ var app = angular.module('tru.type.lib',
                     link: function(scope, element) {
                         var oldValue;
                         var input = element[0].querySelectorAll('input')[0];
+                        var maxLength = scope.field.type.property.maxLength ? scope.field.type.property.maxLength : 0;
 
                         angular.element(input).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
                             if (!scope.field.context.isGrid) {
-                                $timeout(function() {
+                                //$timeout(function() {
                                     input.select();
-                                });
+                                //});
                             }
                         });
 
@@ -1374,6 +1637,20 @@ var app = angular.module('tru.type.lib',
                                 scope.field.value.$ = oldValue;
                                 input.blur();
                             }
+                        });
+
+                        angular.element(input).bind('paste', function (e) {
+                            e.preventDefault();
+                            var caretPos =  input.selectionStart;
+                            var caretEnd = input.selectionEnd;
+                            var txt = scope.field.value.$ ? scope.field.value.$ : '';
+                            var result;
+
+                            if (e.originalEvent.clipboardData)
+                                result = (txt.substring(0, caretPos) + e.originalEvent.clipboardData.getData('text').split('\n').join('') + txt.substring(caretEnd)).substring(0, maxLength);
+                            else
+                                result = (txt.substring(0, caretPos) + window.clipboardData.getData('text').split('\n').join('') + txt.substring(caretEnd)).substring(0, maxLength);
+                            scope.field.value.$ = result;
                         });
 
                         display.setVisibility(element, scope.field.type.canDisplay);
@@ -1445,6 +1722,38 @@ var app = angular.module('tru.type.lib',
 (function(){
     'use strict';
 
+    var module = angular.module('std.usa.address.zip.9.edit', []);
+
+    module.directive('stdUsaAddressZip9Edit',
+        ['$templateCache', 'stdDisplay',
+            function($templateCache, display) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    template: $templateCache.get('src/templates/edit/std-usa-address-zip-9-edit.html'),
+                    link: {
+                        pre: function (scope, element) {
+                            scope.field.children.zip.property.entryFilter = scope.field.property.zipEntryFilter;
+                            scope.field.children.zip.property.watermark = scope.field.property.zipWatermark;
+                        },
+                        post: function(scope, element) {
+                            var stateLabel = angular.element(element[0].querySelectorAll('label')[4]);
+                            var zipLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            stateLabel.addClass('ttl-no-label-width');
+                            zipLabel.addClass('ttl-no-label-width');
+                            display.setVisibility(element, scope.field.type.canDisplay);
+                        }
+                    }
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
     var module = angular.module('std.usa.dollar.edit', []);
 
     module.directive('stdUsaDollarEdit',
@@ -1479,6 +1788,28 @@ var app = angular.module('tru.type.lib',
                         label: '@'
                     },
                     template: $templateCache.get('src/templates/edit/std-usa-zip-5-edit.html'),
+                    link: function(scope, element) {
+                        display.setVisibility(element, scope.field.type.canDisplay);
+                    }
+                };
+            }
+        ]);
+})();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.usa.zip.9.edit', []);
+
+    module.directive('stdUsaZip9Edit',
+        ['$templateCache', 'stdDisplay',
+            function($templateCache, display) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    template: $templateCache.get('src/templates/edit/std-usa-zip-9-edit.html'),
                     link: function(scope, element) {
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
@@ -2800,10 +3131,186 @@ var app = angular.module('tru.type.lib',
 (function () {
     'use strict';
 
+    var module = angular.module('std.intl.address.basic.query', []);
+
+    module.controller('stdIntlAddressBasicQueryController', ['$scope', 'stdOperatorLookup',
+        function ($scope, operatorLookup) {
+
+        }]);
+
+    module.directive('stdIntlAddressBasicQuery',
+        ['$templateCache',
+            function ($templateCache) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    require: '^truSearchGroup',
+                    template: $templateCache.get('src/templates/query/std-intl-address-basic-query.html'),
+                    controller: 'stdIntlAddressBasicQueryController',
+                    link: {
+                        pre: function (scope, element) {
+                            scope.field.children.address1.property.operator = 'contains';
+                            scope.field.children.address2.property.operator = 'contains';
+                            scope.field.children.country.property.operator = 'contains';
+                            scope.field.children.city.property.operator = 'contains';
+                            scope.field.children.stateProvince.property.operator = 'contains';
+                            scope.field.children.postalCode.property.operator = 'contains';
+                        },
+                        post: function (scope, element, attrs, searchGroupCtrl) {
+                            var stateProvinceLabel = angular.element(element[0].querySelectorAll('label')[4]);
+                            var postalCodeLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            stateProvinceLabel.addClass('ttl-no-label-width');
+                            postalCodeLabel.addClass('ttl-no-label-width');
+
+                            var onPredicateCB = function () {
+                                return function () {
+                                    var predicates = [];
+                                    var queryPredicate = scope.field.queryPredicate;
+
+                                    var address1 = scope.field.children.address1.value.$;
+                                    if (typeof address1 !== 'undefined')
+                                        predicates.push(queryPredicate.create('Address1', 'contains', address1));
+
+                                    var address2 = scope.field.children.address2.value.$;
+                                    if (typeof address2 !== 'undefined')
+                                        predicates.push(queryPredicate.create('Address2', 'contains', address2));
+
+                                    var country = scope.field.children.country.value.$;
+                                    if (typeof country !== 'undefined')
+                                        predicates.push(queryPredicate.create('Country', 'contains', country));
+
+                                    var city = scope.field.children.city.value.$;
+                                    if (typeof city !== 'undefined')
+                                        predicates.push(queryPredicate.create('City', 'contains', city));
+
+                                    var stateProvince = scope.field.children.stateProvince.value.$;
+                                    if (typeof stateProvince !== 'undefined')
+                                        predicates.push(queryPredicate.create('StateProvince', 'contains', stateProvince));
+
+                                    var postalCode = scope.field.children.postalCode.value.$;
+                                    if (typeof postalCode !== 'undefined')
+                                        predicates.push(queryPredicate.create('PostalCode', 'contains', postalCode));
+
+                                    if (predicates.length) {
+                                        var predicate = undefined;
+                                        for (var i = 0; i < predicates.length; i++) {
+                                            if (i === 0) {
+                                                predicate = predicates[i];
+                                            } else {
+                                                predicate = predicate.and(predicates[i]);
+                                            }
+                                        }
+                                        queryPredicate.set(predicate);
+                                    } else
+                                        queryPredicate.clear();
+                                }
+                            }();
+
+                            searchGroupCtrl.registerPredicate(onPredicateCB);
+                        }
+                    }
+                };
+            }
+        ]);
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.intl.address.query', []);
+
+    module.controller('stdIntlAddressQueryController', ['$scope', 'stdOperatorLookup',
+        function ($scope, operatorLookup) {
+
+        }]);
+
+    module.directive('stdIntlAddressQuery',
+        ['$templateCache',
+            function ($templateCache) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    require: '^truSearchGroup',
+                    template: $templateCache.get('src/templates/query/std-intl-address-query.html'),
+                    controller: 'stdIntlAddressQueryController',
+                    link: {
+                        pre: function (scope, element) {
+                            scope.field.children.address1.property.operator = 'contains';
+                            scope.field.children.address2.property.operator = 'contains';
+                            scope.field.children.country.property.operator = 'contains';
+                            scope.field.children.city.property.operator = 'contains';
+                            scope.field.children.stateProvince.property.operator = 'contains';
+                            scope.field.children.postalCode.property.operator = 'contains';
+                        },
+                        post: function (scope, element, attrs, searchGroupCtrl) {
+                            var stateProvinceLabel = angular.element(element[0].querySelectorAll('label')[4]);
+                            var postalCodeLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            stateProvinceLabel.addClass('ttl-no-label-width');
+                            postalCodeLabel.addClass('ttl-no-label-width');
+
+                            var onPredicateCB = function () {
+                                return function () {
+                                    var predicates = [];
+                                    var queryPredicate = scope.field.queryPredicate;
+
+                                    var address1 = scope.field.children.address1.value.$;
+                                    if (typeof address1 !== 'undefined')
+                                        predicates.push(queryPredicate.create('Address1', 'contains', address1));
+
+                                    var address2 = scope.field.children.address2.value.$;
+                                    if (typeof address2 !== 'undefined')
+                                        predicates.push(queryPredicate.create('Address2', 'contains', address2));
+
+                                    var country = scope.field.children.country.value.$;
+                                    if (typeof country !== 'undefined')
+                                        predicates.push(queryPredicate.create('Country', 'contains', country));
+
+                                    var city = scope.field.children.city.value.$;
+                                    if (typeof city !== 'undefined')
+                                        predicates.push(queryPredicate.create('City', 'contains', city));
+
+                                    var stateProvince = scope.field.children.stateProvince.value.$;
+                                    if (typeof stateProvince !== 'undefined')
+                                        predicates.push(queryPredicate.create('StateProvince', 'contains', stateProvince));
+
+                                    var postalCode = scope.field.children.postalCode.value.$;
+                                    if (typeof postalCode !== 'undefined')
+                                        predicates.push(queryPredicate.create('PostalCode', 'contains', postalCode));
+
+                                    if (predicates.length) {
+                                        var predicate = undefined;
+                                        for (var i = 0; i < predicates.length; i++) {
+                                            if (i === 0) {
+                                                predicate = predicates[i];
+                                            } else {
+                                                predicate = predicate.and(predicates[i]);
+                                            }
+                                        }
+                                        queryPredicate.set(predicate);
+                                    } else
+                                        queryPredicate.clear();
+                                }
+                            }();
+
+                            searchGroupCtrl.registerPredicate(onPredicateCB);
+                        }
+                    }
+                };
+            }
+        ]);
+})();
+(function () {
+    'use strict';
+
     var module = angular.module('std.or.list.checkbox.query', []);
 
-    module.controller('stdOrListCheckboxQueryController', ['$scope', 'stdOperatorLookup',
-        function ($scope, operatorLookup) {
+    module.controller('stdOrListCheckboxQueryController', ['$scope', 'stdOperatorLookup', 'stdUtil',
+        function ($scope, operatorLookup, util) {
             var ctrlValue = $scope.field.property.value ? $scope.field.property.value : [];
             var ctrlDefault = $scope.field.property.default ? $scope.field.property.default : [];
             var ctrlValueHasValue = ctrlValue.length > 0;
@@ -2853,6 +3360,7 @@ var app = angular.module('tru.type.lib',
             };
 
             var loadChoices = function(choices) {
+                if (choices == null) return;
                 angular.forEach(choices, function (choice) {
                     if (ctrlValueHasValue) {
                         if (ctrlValue.indexOf(choice.value.$) !== -1) {
@@ -2860,7 +3368,7 @@ var app = angular.module('tru.type.lib',
                             choice["checked"] = true;
                         }
                     } else if (ctrlDefaultHasValue) {
-                        choice["checked"] = ctrlDefault.indexOf(choice.value.$) !== -1;
+                        choice["checked"] = ctrlDefault.indexOf(choice.value.$.toString()) !== -1;
                     } else {
                         choice["checked"] = false;
                     }
@@ -2899,6 +3407,7 @@ var app = angular.module('tru.type.lib',
                         choice.checked = true;
                     });
                 }
+                $scope.updateQueryPredicate();
             };
 
             $scope.$watch('data.choices', function () {
@@ -5227,7 +5736,7 @@ var app = angular.module('tru.type.lib',
                                 focusedValue = scope.field.value.$;
 
                             if (e.keyCode === 27) {
-                                scope.field.value.$ = focusedValue;
+                                //scope.field.value.$ = focusedValue;
                                 //ngModelCtrl.$setValidity('invalid-time', true);
                                 //ngModelCtrl.$setViewValue($filter('date')(new Date(focusedValue), 'MM/dd/yyyy hh:mm a'));
                                 //ngModelCtrl.$render();
@@ -5449,10 +5958,12 @@ var app = angular.module('tru.type.lib',
                         });
 
                         element.bind('focus', function (e) {
-                            if (!focusedValue && focusedValue !== null)
-                                focusedValue = scope.field.value.$;
+
 
                             $timeout(function () {
+                                if (!focusedValue && focusedValue !== null)
+                                    focusedValue = scope.field.value.$;
+
                                 if (externalEvent) {
                                     externalEvent = false;
                                     return;
@@ -5843,6 +6354,132 @@ var app = angular.module('tru.type.lib',
                     }
                 };
             }]);
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.intl.phone', []);
+
+    goog.require('goog.dom');
+    goog.require('goog.json');
+    goog.require('goog.proto2.ObjectSerializer');
+    goog.require('goog.string.StringBuffer');
+    goog.require('i18n.phonenumbers.AsYouTypeFormatter');
+    goog.require('i18n.phonenumbers.PhoneNumberFormat');
+    goog.require('i18n.phonenumbers.PhoneNumberType');
+    goog.require('i18n.phonenumbers.PhoneNumberUtil');
+    goog.require('i18n.phonenumbers.PhoneNumberUtil.ValidationResult');
+
+    module.directive('stdIntlPhone',
+        ['$filter', '$browser',
+            function ($filter, $browser) {
+                return {
+                    require: 'ngModel',
+                    link: function ($scope, $element, $attrs, ngModelCtrl) {
+                        var phoneUtil = i18n.phonenumbers.PhoneNumberUtil.getInstance();
+                        var PNF = i18n.phonenumbers.PhoneNumberFormat;
+                        var listener = function () {
+                            var clean = $element.val().replace(/[^0-9]/g, '');
+                            try {
+                                var countryCode = $scope.$parent.field.children.countryCode.value.$ ? $scope.$parent.field.children.countryCode.value.$ : $scope.$parent.field.property.countryCode;
+                                var number = phoneUtil.parseAndKeepRawInput(clean, countryCode);
+                                $element.val(phoneUtil.format(number, PNF.NATIONAL));
+                            } catch(e) {
+                                $element.val(clean);
+                            }
+
+                        };
+
+                        ngModelCtrl.$parsers.push(function (viewValue) {
+                            return viewValue.replace(/[^0-9]/g, '');
+                        });
+
+                        ngModelCtrl.$render = function () {
+                            var clean = ngModelCtrl.$modelValue;
+                            try {
+                                var countryCode = $scope.$parent.field.children.countryCode.value.$ ? $scope.$parent.field.children.countryCode.value.$ : $scope.$parent.field.property.countryCode;
+                                var number = phoneUtil.parseAndKeepRawInput(clean, countryCode);
+                                $element.val(phoneUtil.format(number, PNF.NATIONAL));
+                            } catch (e) {
+                                $element.val(clean);
+                            }
+                        };
+
+                        $element.bind('change', listener);
+                        $element.bind('keydown', function (event) {
+                            var key = event.keyCode;
+                            if (key == 91 || (15 < key && key < 19) || (37 <= key && key <= 40)) {
+                                return;
+                            }
+                            $browser.defer(listener);
+                        });
+
+                        $element.bind('paste cut', function () {
+                            $browser.defer(listener);
+                        });
+                    }
+                };
+            }]);
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.intl.postal.code', []);
+
+    module.directive('stdIntlPostalCode',
+        ['$filter', '$browser',
+            function ($filter, $browser) {
+                return {
+                    require: 'ngModel',
+                    link: function ($scope, $element, $attrs, ngModelCtrl) {
+                        var listener = function () {
+                            var value = $element.val().replace(/[^0-9]/g, '');
+                            $element.val($filter('zip')(value, false));
+                        };
+
+                        ngModelCtrl.$parsers.push(function (viewValue) {
+                            return viewValue.replace(/[^0-9]/g, '').slice(0, 9);
+                        });
+
+                        ngModelCtrl.$render = function () {
+                            $element.val($filter('zip')(ngModelCtrl.$viewValue, false));
+                        };
+
+                        $element.bind('change', listener);
+                        $element.bind('keydown', function (event) {
+                            var key = event.keyCode;
+                            if (key == 91 || (15 < key && key < 19) || (37 <= key && key <= 40)) {
+                                return;
+                            }
+                            $browser.defer(listener);
+                        });
+
+                        $element.bind('paste cut', function () {
+                            $browser.defer(listener);
+                        });
+                    }
+                };
+            }]);
+
+    module.filter('stdIntlPostalCode', function () {
+        return function (zip) {
+            if (!zip) { return ''; }
+
+            var value = zip.toString().trim().replace(/^\+/, '');
+
+            if (value.match(/[^0-9]/)) {
+                return zip;
+            }
+
+            var number = value;
+
+            if (value.length > 5) {
+                number = number.slice(0, 5) + '-' + number.slice(5, 9);
+            }
+
+            return number.trim();
+        };
+    });
 })();
 (function(){
     'use strict';
@@ -6438,6 +7075,139 @@ var app = angular.module('tru.type.lib',
                 };
             }
         ]);
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.na.phone', []);
+
+    module.directive('stdNaPhone',
+        ['$filter', '$browser',
+            function ($filter, $browser) {
+                return {
+                    require: 'ngModel',
+                    link: function ($scope, $element, $attrs, ngModelCtrl) {
+
+                        ngModelCtrl.$formatters.push(function (val) {
+                            return $filter('stdNaPhone')(val, false);
+                        });
+
+                        var initalLength, formattedLength, start, end;
+                        ngModelCtrl.$parsers.push(function (viewValue) {
+                            var cleaned = viewValue.replace(/[^0-9]/g, '').slice(0, 20);
+                            var formattedValue = $filter('stdNaPhone')(cleaned, false);
+
+                            if (formattedValue !== viewValue) {
+                                initalLength = viewValue.length;
+                                formattedLength = formattedValue.length;
+                                start = $element[0].selectionStart;
+                                end = $element[0].selectionEnd;
+                                start += formattedLength - initalLength;
+                                end += formattedLength - initalLength;
+                                ngModelCtrl.$setViewValue($filter('stdNaPhone')(cleaned, false));
+                                ngModelCtrl.$render();
+                                $element[0].setSelectionRange(start, end);
+                            }
+                            return cleaned;
+                        });
+
+
+                        $element.bind('change', listener);
+                        $element.bind('keydown', function (event) {
+                            var key = event.keyCode;
+                            if (key == 91 || (15 < key && key < 19) || (37 <= key && key <= 40)) {
+                                return;
+                            }
+                        });
+                    }
+                };
+            }]);
+
+    module.filter('stdNaPhone', function () {
+        return function (number) {
+            if (number.value) {
+                if (number.value.$)
+                    number = number.value.$.replace(/[^0-9]/g, '');
+                else
+                    number = number.value.$
+            }
+            if (!number) { return ''; }
+
+            number = String(number);
+
+            var formattedNumber = number;
+
+            var c = (number[0] == '1') ? '+1 ' : '';
+            number = number[0] == '1' ? number.slice(1) : number;
+
+            var area = number.substring(0,3);
+            var front = number.substring(3, 6);
+            var end = number.substring(6, 10);
+            var ext = number.substring(10, 20);
+
+            if (front) {
+                formattedNumber = (c + "(" + area + ") " + front);
+            }
+            if (end) {
+                formattedNumber += ("-" + end);
+            }
+            if (ext) {
+                formattedNumber += (" x" + ext);
+            }
+            return formattedNumber;
+        };
+    });
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.number.only', []);
+
+    module.directive('stdNumberOnly',
+        ['$browser',
+            function ($browser) {
+                return {
+                    require: 'ngModel',
+                    scope: {
+                        stdIntegerOnly: '='
+                    },
+                    link: function (scope, element, attrs, ngModelCtrl) {
+                        var listener = function () {
+                            var value = element.val().replace(/[^0-9]/g, '');
+                            element.val(value);
+                        };
+
+                        ngModelCtrl.$formatters.push(function (val) {
+                            if (!val && val !== null)
+                                return val.replace(/[^0-9]/g, '');
+                            return val;
+                        });
+
+                        ngModelCtrl.$parsers.push(function (val) {
+                            return val.replace(/[^0-9]/g, '');
+                        });
+
+                        element.bind('change', listener);
+                        element.bind('keydown', function (event) {
+                            var key = event.keyCode;
+                            if (key == 91 || (15 < key && key < 19) || (37 <= key && key <= 40)) {
+                                return;
+                            }
+                            $browser.defer(listener);
+                        });
+
+                        element.bind('paste cut', function () {
+                            $browser.defer(listener);
+                        });
+
+                        element.bind('keypress', function (event) {
+                            if (event.keyCode === 32) {
+                                event.preventDefault();
+                            }
+                        });
+                    }
+                };
+            }]);
 })();
 (function () {
     'use strict';
@@ -7181,6 +7951,10 @@ var app = angular.module('tru.type.lib',
 
                         var wholePlaces = 38 - decimalPlaces;
 
+                        ngModelCtrl.$formatters.push(function (val) {
+                            return '$' + val.toFixed(2);
+                        });
+
                         ngModelCtrl.$parsers.push(function (val) {
                             if (element[0] !== $document[0].activeElement) return ngModelCtrl.$modelValue;
                             var number = Number(val).toPrecision();
@@ -7268,6 +8042,66 @@ var app = angular.module('tru.type.lib',
                     }
                 };
             }]);
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.zip', []);
+
+    module.directive('stdZip',
+        ['$filter', '$browser',
+            function ($filter, $browser) {
+                return {
+                    require: 'ngModel',
+                    link: function ($scope, $element, $attrs, ngModelCtrl) {
+                        var listener = function () {
+                            var value = $element.val().replace(/[^0-9]/g, '');
+                            $element.val($filter('zip')(value, false));
+                        };
+
+                        ngModelCtrl.$parsers.push(function (viewValue) {
+                            return viewValue.replace(/[^0-9]/g, '').slice(0, 9);
+                        });
+
+                        ngModelCtrl.$render = function () {
+                            $element.val($filter('zip')(ngModelCtrl.$viewValue, false));
+                        };
+
+                        $element.bind('change', listener);
+                        $element.bind('keydown', function (event) {
+                            var key = event.keyCode;
+                            if (key == 91 || (15 < key && key < 19) || (37 <= key && key <= 40)) {
+                                return;
+                            }
+                            $browser.defer(listener);
+                        });
+
+                        $element.bind('paste cut', function () {
+                            $browser.defer(listener);
+                        });
+                    }
+                };
+            }]);
+
+    module.filter('zip', function () {
+        return function (zip) {
+            if (!zip) { return ''; }
+
+            var value = zip.toString().trim().replace(/^\+/, '');
+
+            if (value.match(/[^0-9]/)) {
+                return zip;
+            }
+
+            var number = value;
+
+            if (value.length > 5) {
+                number = number.slice(0, 5) + '-' + number.slice(5, 9);
+            }
+
+            return number.trim();
+        };
+    });
 })();
 (function() {
     var root;
@@ -7454,6 +8288,1276 @@ var app = angular.module('tru.type.lib',
             }
         });
     };
+})();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.countries', []);
+
+    module.factory('stdCountries',
+        [
+            function() {
+                this.allCountries = [
+                    [
+                        "Afghanistan (‫افغانستان‬‎)",
+                        "af",
+                        "93"
+                    ],
+                    [
+                        "Albania (Shqipëri)",
+                        "al",
+                        "355"
+                    ],
+                    [
+                        "Algeria (‫الجزائر‬‎)",
+                        "dz",
+                        "213"
+                    ],
+                    [
+                        "American Samoa",
+                        "as",
+                        "1684"
+                    ],
+                    [
+                        "Andorra",
+                        "ad",
+                        "376"
+                    ],
+                    [
+                        "Angola",
+                        "ao",
+                        "244"
+                    ],
+                    [
+                        "Anguilla",
+                        "ai",
+                        "1264"
+                    ],
+                    [
+                        "Antigua and Barbuda",
+                        "ag",
+                        "1268"
+                    ],
+                    [
+                        "Argentina",
+                        "ar",
+                        "54"
+                    ],
+                    [
+                        "Armenia (Հայաստան)",
+                        "am",
+                        "374"
+                    ],
+                    [
+                        "Aruba",
+                        "aw",
+                        "297"
+                    ],
+                    [
+                        "Australia",
+                        "au",
+                        "61",
+                        0
+                    ],
+                    [
+                        "Austria (Österreich)",
+                        "at",
+                        "43"
+                    ],
+                    [
+                        "Azerbaijan (Azərbaycan)",
+                        "az",
+                        "994"
+                    ],
+                    [
+                        "Bahamas",
+                        "bs",
+                        "1242"
+                    ],
+                    [
+                        "Bahrain (‫البحرين‬‎)",
+                        "bh",
+                        "973"
+                    ],
+                    [
+                        "Bangladesh (বাংলাদেশ)",
+                        "bd",
+                        "880"
+                    ],
+                    [
+                        "Barbados",
+                        "bb",
+                        "1246"
+                    ],
+                    [
+                        "Belarus (Беларусь)",
+                        "by",
+                        "375"
+                    ],
+                    [
+                        "Belgium (België)",
+                        "be",
+                        "32"
+                    ],
+                    [
+                        "Belize",
+                        "bz",
+                        "501"
+                    ],
+                    [
+                        "Benin (Bénin)",
+                        "bj",
+                        "229"
+                    ],
+                    [
+                        "Bermuda",
+                        "bm",
+                        "1441"
+                    ],
+                    [
+                        "Bhutan (འབྲུག)",
+                        "bt",
+                        "975"
+                    ],
+                    [
+                        "Bolivia",
+                        "bo",
+                        "591"
+                    ],
+                    [
+                        "Bosnia and Herzegovina (Босна и Херцеговина)",
+                        "ba",
+                        "387"
+                    ],
+                    [
+                        "Botswana",
+                        "bw",
+                        "267"
+                    ],
+                    [
+                        "Brazil (Brasil)",
+                        "br",
+                        "55"
+                    ],
+                    [
+                        "British Indian Ocean Territory",
+                        "io",
+                        "246"
+                    ],
+                    [
+                        "British Virgin Islands",
+                        "vg",
+                        "1284"
+                    ],
+                    [
+                        "Brunei",
+                        "bn",
+                        "673"
+                    ],
+                    [
+                        "Bulgaria (България)",
+                        "bg",
+                        "359"
+                    ],
+                    [
+                        "Burkina Faso",
+                        "bf",
+                        "226"
+                    ],
+                    [
+                        "Burundi (Uburundi)",
+                        "bi",
+                        "257"
+                    ],
+                    [
+                        "Cambodia (កម្ពុជា)",
+                        "kh",
+                        "855"
+                    ],
+                    [
+                        "Cameroon (Cameroun)",
+                        "cm",
+                        "237"
+                    ],
+                    [
+                        "Canada",
+                        "ca",
+                        "1",
+                        1,
+                        ["204", "226", "236", "249", "250", "289", "306", "343", "365", "387", "403", "416", "418", "431", "437", "438", "450", "506", "514", "519", "548", "579", "581", "587", "604", "613", "639", "647", "672", "705", "709", "742", "778", "780", "782", "807", "819", "825", "867", "873", "902", "905"]
+                    ],
+                    [
+                        "Cape Verde (Kabu Verdi)",
+                        "cv",
+                        "238"
+                    ],
+                    [
+                        "Caribbean Netherlands",
+                        "bq",
+                        "599",
+                        1
+                    ],
+                    [
+                        "Cayman Islands",
+                        "ky",
+                        "1345"
+                    ],
+                    [
+                        "Central African Republic (République centrafricaine)",
+                        "cf",
+                        "236"
+                    ],
+                    [
+                        "Chad (Tchad)",
+                        "td",
+                        "235"
+                    ],
+                    [
+                        "Chile",
+                        "cl",
+                        "56"
+                    ],
+                    [
+                        "China (中国)",
+                        "cn",
+                        "86"
+                    ],
+                    [
+                        "Christmas Island",
+                        "cx",
+                        "61",
+                        2
+                    ],
+                    [
+                        "Cocos (Keeling) Islands",
+                        "cc",
+                        "61",
+                        1
+                    ],
+                    [
+                        "Colombia",
+                        "co",
+                        "57"
+                    ],
+                    [
+                        "Comoros (‫جزر القمر‬‎)",
+                        "km",
+                        "269"
+                    ],
+                    [
+                        "Congo (DRC) (Jamhuri ya Kidemokrasia ya Kongo)",
+                        "cd",
+                        "243"
+                    ],
+                    [
+                        "Congo (Republic) (Congo-Brazzaville)",
+                        "cg",
+                        "242"
+                    ],
+                    [
+                        "Cook Islands",
+                        "ck",
+                        "682"
+                    ],
+                    [
+                        "Costa Rica",
+                        "cr",
+                        "506"
+                    ],
+                    [
+                        "Côte d’Ivoire",
+                        "ci",
+                        "225"
+                    ],
+                    [
+                        "Croatia (Hrvatska)",
+                        "hr",
+                        "385"
+                    ],
+                    [
+                        "Cuba",
+                        "cu",
+                        "53"
+                    ],
+                    [
+                        "Curaçao",
+                        "cw",
+                        "599",
+                        0
+                    ],
+                    [
+                        "Cyprus (Κύπρος)",
+                        "cy",
+                        "357"
+                    ],
+                    [
+                        "Czech Republic (Česká republika)",
+                        "cz",
+                        "420"
+                    ],
+                    [
+                        "Denmark (Danmark)",
+                        "dk",
+                        "45"
+                    ],
+                    [
+                        "Djibouti",
+                        "dj",
+                        "253"
+                    ],
+                    [
+                        "Dominica",
+                        "dm",
+                        "1767"
+                    ],
+                    [
+                        "Dominican Republic (República Dominicana)",
+                        "do",
+                        "1",
+                        2,
+                        ["809", "829", "849"]
+                    ],
+                    [
+                        "Ecuador",
+                        "ec",
+                        "593"
+                    ],
+                    [
+                        "Egypt (‫مصر‬‎)",
+                        "eg",
+                        "20"
+                    ],
+                    [
+                        "El Salvador",
+                        "sv",
+                        "503"
+                    ],
+                    [
+                        "Equatorial Guinea (Guinea Ecuatorial)",
+                        "gq",
+                        "240"
+                    ],
+                    [
+                        "Eritrea",
+                        "er",
+                        "291"
+                    ],
+                    [
+                        "Estonia (Eesti)",
+                        "ee",
+                        "372"
+                    ],
+                    [
+                        "Ethiopia",
+                        "et",
+                        "251"
+                    ],
+                    [
+                        "Falkland Islands (Islas Malvinas)",
+                        "fk",
+                        "500"
+                    ],
+                    [
+                        "Faroe Islands (Føroyar)",
+                        "fo",
+                        "298"
+                    ],
+                    [
+                        "Fiji",
+                        "fj",
+                        "679"
+                    ],
+                    [
+                        "Finland (Suomi)",
+                        "fi",
+                        "358",
+                        0
+                    ],
+                    [
+                        "France",
+                        "fr",
+                        "33"
+                    ],
+                    [
+                        "French Guiana (Guyane française)",
+                        "gf",
+                        "594"
+                    ],
+                    [
+                        "French Polynesia (Polynésie française)",
+                        "pf",
+                        "689"
+                    ],
+                    [
+                        "Gabon",
+                        "ga",
+                        "241"
+                    ],
+                    [
+                        "Gambia",
+                        "gm",
+                        "220"
+                    ],
+                    [
+                        "Georgia (საქართველო)",
+                        "ge",
+                        "995"
+                    ],
+                    [
+                        "Germany (Deutschland)",
+                        "de",
+                        "49"
+                    ],
+                    [
+                        "Ghana (Gaana)",
+                        "gh",
+                        "233"
+                    ],
+                    [
+                        "Gibraltar",
+                        "gi",
+                        "350"
+                    ],
+                    [
+                        "Greece (Ελλάδα)",
+                        "gr",
+                        "30"
+                    ],
+                    [
+                        "Greenland (Kalaallit Nunaat)",
+                        "gl",
+                        "299"
+                    ],
+                    [
+                        "Grenada",
+                        "gd",
+                        "1473"
+                    ],
+                    [
+                        "Guadeloupe",
+                        "gp",
+                        "590",
+                        0
+                    ],
+                    [
+                        "Guam",
+                        "gu",
+                        "1671"
+                    ],
+                    [
+                        "Guatemala",
+                        "gt",
+                        "502"
+                    ],
+                    [
+                        "Guernsey",
+                        "gg",
+                        "44",
+                        1
+                    ],
+                    [
+                        "Guinea (Guinée)",
+                        "gn",
+                        "224"
+                    ],
+                    [
+                        "Guinea-Bissau (Guiné Bissau)",
+                        "gw",
+                        "245"
+                    ],
+                    [
+                        "Guyana",
+                        "gy",
+                        "592"
+                    ],
+                    [
+                        "Haiti",
+                        "ht",
+                        "509"
+                    ],
+                    [
+                        "Honduras",
+                        "hn",
+                        "504"
+                    ],
+                    [
+                        "Hong Kong (香港)",
+                        "hk",
+                        "852"
+                    ],
+                    [
+                        "Hungary (Magyarország)",
+                        "hu",
+                        "36"
+                    ],
+                    [
+                        "Iceland (Ísland)",
+                        "is",
+                        "354"
+                    ],
+                    [
+                        "India (भारत)",
+                        "in",
+                        "91"
+                    ],
+                    [
+                        "Indonesia",
+                        "id",
+                        "62"
+                    ],
+                    [
+                        "Iran (‫ایران‬‎)",
+                        "ir",
+                        "98"
+                    ],
+                    [
+                        "Iraq (‫العراق‬‎)",
+                        "iq",
+                        "964"
+                    ],
+                    [
+                        "Ireland",
+                        "ie",
+                        "353"
+                    ],
+                    [
+                        "Isle of Man",
+                        "im",
+                        "44",
+                        2
+                    ],
+                    [
+                        "Israel (‫ישראל‬‎)",
+                        "il",
+                        "972"
+                    ],
+                    [
+                        "Italy (Italia)",
+                        "it",
+                        "39",
+                        0
+                    ],
+                    [
+                        "Jamaica",
+                        "jm",
+                        "1876"
+                    ],
+                    [
+                        "Japan (日本)",
+                        "jp",
+                        "81"
+                    ],
+                    [
+                        "Jersey",
+                        "je",
+                        "44",
+                        3
+                    ],
+                    [
+                        "Jordan (‫الأردن‬‎)",
+                        "jo",
+                        "962"
+                    ],
+                    [
+                        "Kazakhstan (Казахстан)",
+                        "kz",
+                        "7",
+                        1
+                    ],
+                    [
+                        "Kenya",
+                        "ke",
+                        "254"
+                    ],
+                    [
+                        "Kiribati",
+                        "ki",
+                        "686"
+                    ],
+                    [
+                        "Kuwait (‫الكويت‬‎)",
+                        "kw",
+                        "965"
+                    ],
+                    [
+                        "Kyrgyzstan (Кыргызстан)",
+                        "kg",
+                        "996"
+                    ],
+                    [
+                        "Laos (ລາວ)",
+                        "la",
+                        "856"
+                    ],
+                    [
+                        "Latvia (Latvija)",
+                        "lv",
+                        "371"
+                    ],
+                    [
+                        "Lebanon (‫لبنان‬‎)",
+                        "lb",
+                        "961"
+                    ],
+                    [
+                        "Lesotho",
+                        "ls",
+                        "266"
+                    ],
+                    [
+                        "Liberia",
+                        "lr",
+                        "231"
+                    ],
+                    [
+                        "Libya (‫ليبيا‬‎)",
+                        "ly",
+                        "218"
+                    ],
+                    [
+                        "Liechtenstein",
+                        "li",
+                        "423"
+                    ],
+                    [
+                        "Lithuania (Lietuva)",
+                        "lt",
+                        "370"
+                    ],
+                    [
+                        "Luxembourg",
+                        "lu",
+                        "352"
+                    ],
+                    [
+                        "Macau (澳門)",
+                        "mo",
+                        "853"
+                    ],
+                    [
+                        "Macedonia (FYROM) (Македонија)",
+                        "mk",
+                        "389"
+                    ],
+                    [
+                        "Madagascar (Madagasikara)",
+                        "mg",
+                        "261"
+                    ],
+                    [
+                        "Malawi",
+                        "mw",
+                        "265"
+                    ],
+                    [
+                        "Malaysia",
+                        "my",
+                        "60"
+                    ],
+                    [
+                        "Maldives",
+                        "mv",
+                        "960"
+                    ],
+                    [
+                        "Mali",
+                        "ml",
+                        "223"
+                    ],
+                    [
+                        "Malta",
+                        "mt",
+                        "356"
+                    ],
+                    [
+                        "Marshall Islands",
+                        "mh",
+                        "692"
+                    ],
+                    [
+                        "Martinique",
+                        "mq",
+                        "596"
+                    ],
+                    [
+                        "Mauritania (‫موريتانيا‬‎)",
+                        "mr",
+                        "222"
+                    ],
+                    [
+                        "Mauritius (Moris)",
+                        "mu",
+                        "230"
+                    ],
+                    [
+                        "Mayotte",
+                        "yt",
+                        "262",
+                        1
+                    ],
+                    [
+                        "Mexico (México)",
+                        "mx",
+                        "52"
+                    ],
+                    [
+                        "Micronesia",
+                        "fm",
+                        "691"
+                    ],
+                    [
+                        "Moldova (Republica Moldova)",
+                        "md",
+                        "373"
+                    ],
+                    [
+                        "Monaco",
+                        "mc",
+                        "377"
+                    ],
+                    [
+                        "Mongolia (Монгол)",
+                        "mn",
+                        "976"
+                    ],
+                    [
+                        "Montenegro (Crna Gora)",
+                        "me",
+                        "382"
+                    ],
+                    [
+                        "Montserrat",
+                        "ms",
+                        "1664"
+                    ],
+                    [
+                        "Morocco (‫المغرب‬‎)",
+                        "ma",
+                        "212",
+                        0
+                    ],
+                    [
+                        "Mozambique (Moçambique)",
+                        "mz",
+                        "258"
+                    ],
+                    [
+                        "Myanmar (Burma) (မြန်မာ)",
+                        "mm",
+                        "95"
+                    ],
+                    [
+                        "Namibia (Namibië)",
+                        "na",
+                        "264"
+                    ],
+                    [
+                        "Nauru",
+                        "nr",
+                        "674"
+                    ],
+                    [
+                        "Nepal (नेपाल)",
+                        "np",
+                        "977"
+                    ],
+                    [
+                        "Netherlands (Nederland)",
+                        "nl",
+                        "31"
+                    ],
+                    [
+                        "New Caledonia (Nouvelle-Calédonie)",
+                        "nc",
+                        "687"
+                    ],
+                    [
+                        "New Zealand",
+                        "nz",
+                        "64"
+                    ],
+                    [
+                        "Nicaragua",
+                        "ni",
+                        "505"
+                    ],
+                    [
+                        "Niger (Nijar)",
+                        "ne",
+                        "227"
+                    ],
+                    [
+                        "Nigeria",
+                        "ng",
+                        "234"
+                    ],
+                    [
+                        "Niue",
+                        "nu",
+                        "683"
+                    ],
+                    [
+                        "Norfolk Island",
+                        "nf",
+                        "672"
+                    ],
+                    [
+                        "North Korea (조선 민주주의 인민 공화국)",
+                        "kp",
+                        "850"
+                    ],
+                    [
+                        "Northern Mariana Islands",
+                        "mp",
+                        "1670"
+                    ],
+                    [
+                        "Norway (Norge)",
+                        "no",
+                        "47",
+                        0
+                    ],
+                    [
+                        "Oman (‫عُمان‬‎)",
+                        "om",
+                        "968"
+                    ],
+                    [
+                        "Pakistan (‫پاکستان‬‎)",
+                        "pk",
+                        "92"
+                    ],
+                    [
+                        "Palau",
+                        "pw",
+                        "680"
+                    ],
+                    [
+                        "Palestine (‫فلسطين‬‎)",
+                        "ps",
+                        "970"
+                    ],
+                    [
+                        "Panama (Panamá)",
+                        "pa",
+                        "507"
+                    ],
+                    [
+                        "Papua New Guinea",
+                        "pg",
+                        "675"
+                    ],
+                    [
+                        "Paraguay",
+                        "py",
+                        "595"
+                    ],
+                    [
+                        "Peru (Perú)",
+                        "pe",
+                        "51"
+                    ],
+                    [
+                        "Philippines",
+                        "ph",
+                        "63"
+                    ],
+                    [
+                        "Poland (Polska)",
+                        "pl",
+                        "48"
+                    ],
+                    [
+                        "Portugal",
+                        "pt",
+                        "351"
+                    ],
+                    [
+                        "Puerto Rico",
+                        "pr",
+                        "1",
+                        3,
+                        ["787", "939"]
+                    ],
+                    [
+                        "Qatar (‫قطر‬‎)",
+                        "qa",
+                        "974"
+                    ],
+                    [
+                        "Réunion (La Réunion)",
+                        "re",
+                        "262",
+                        0
+                    ],
+                    [
+                        "Romania (România)",
+                        "ro",
+                        "40"
+                    ],
+                    [
+                        "Russia (Россия)",
+                        "ru",
+                        "7",
+                        0
+                    ],
+                    [
+                        "Rwanda",
+                        "rw",
+                        "250"
+                    ],
+                    [
+                        "Saint Barthélemy (Saint-Barthélemy)",
+                        "bl",
+                        "590",
+                        1
+                    ],
+                    [
+                        "Saint Helena",
+                        "sh",
+                        "290"
+                    ],
+                    [
+                        "Saint Kitts and Nevis",
+                        "kn",
+                        "1869"
+                    ],
+                    [
+                        "Saint Lucia",
+                        "lc",
+                        "1758"
+                    ],
+                    [
+                        "Saint Martin (Saint-Martin (partie française))",
+                        "mf",
+                        "590",
+                        2
+                    ],
+                    [
+                        "Saint Pierre and Miquelon (Saint-Pierre-et-Miquelon)",
+                        "pm",
+                        "508"
+                    ],
+                    [
+                        "Saint Vincent and the Grenadines",
+                        "vc",
+                        "1784"
+                    ],
+                    [
+                        "Samoa",
+                        "ws",
+                        "685"
+                    ],
+                    [
+                        "San Marino",
+                        "sm",
+                        "378"
+                    ],
+                    [
+                        "São Tomé and Príncipe (São Tomé e Príncipe)",
+                        "st",
+                        "239"
+                    ],
+                    [
+                        "Saudi Arabia (‫المملكة العربية السعودية‬‎)",
+                        "sa",
+                        "966"
+                    ],
+                    [
+                        "Senegal (Sénégal)",
+                        "sn",
+                        "221"
+                    ],
+                    [
+                        "Serbia (Србија)",
+                        "rs",
+                        "381"
+                    ],
+                    [
+                        "Seychelles",
+                        "sc",
+                        "248"
+                    ],
+                    [
+                        "Sierra Leone",
+                        "sl",
+                        "232"
+                    ],
+                    [
+                        "Singapore",
+                        "sg",
+                        "65"
+                    ],
+                    [
+                        "Sint Maarten",
+                        "sx",
+                        "1721"
+                    ],
+                    [
+                        "Slovakia (Slovensko)",
+                        "sk",
+                        "421"
+                    ],
+                    [
+                        "Slovenia (Slovenija)",
+                        "si",
+                        "386"
+                    ],
+                    [
+                        "Solomon Islands",
+                        "sb",
+                        "677"
+                    ],
+                    [
+                        "Somalia (Soomaaliya)",
+                        "so",
+                        "252"
+                    ],
+                    [
+                        "South Africa",
+                        "za",
+                        "27"
+                    ],
+                    [
+                        "South Korea (대한민국)",
+                        "kr",
+                        "82"
+                    ],
+                    [
+                        "South Sudan (‫جنوب السودان‬‎)",
+                        "ss",
+                        "211"
+                    ],
+                    [
+                        "Spain (España)",
+                        "es",
+                        "34"
+                    ],
+                    [
+                        "Sri Lanka (ශ්‍රී ලංකාව)",
+                        "lk",
+                        "94"
+                    ],
+                    [
+                        "Sudan (‫السودان‬‎)",
+                        "sd",
+                        "249"
+                    ],
+                    [
+                        "Suriname",
+                        "sr",
+                        "597"
+                    ],
+                    [
+                        "Svalbard and Jan Mayen",
+                        "sj",
+                        "47",
+                        1
+                    ],
+                    [
+                        "Swaziland",
+                        "sz",
+                        "268"
+                    ],
+                    [
+                        "Sweden (Sverige)",
+                        "se",
+                        "46"
+                    ],
+                    [
+                        "Switzerland (Schweiz)",
+                        "ch",
+                        "41"
+                    ],
+                    [
+                        "Syria (‫سوريا‬‎)",
+                        "sy",
+                        "963"
+                    ],
+                    [
+                        "Taiwan (台灣)",
+                        "tw",
+                        "886"
+                    ],
+                    [
+                        "Tajikistan",
+                        "tj",
+                        "992"
+                    ],
+                    [
+                        "Tanzania",
+                        "tz",
+                        "255"
+                    ],
+                    [
+                        "Thailand (ไทย)",
+                        "th",
+                        "66"
+                    ],
+                    [
+                        "Timor-Leste",
+                        "tl",
+                        "670"
+                    ],
+                    [
+                        "Togo",
+                        "tg",
+                        "228"
+                    ],
+                    [
+                        "Tokelau",
+                        "tk",
+                        "690"
+                    ],
+                    [
+                        "Tonga",
+                        "to",
+                        "676"
+                    ],
+                    [
+                        "Trinidad and Tobago",
+                        "tt",
+                        "1868"
+                    ],
+                    [
+                        "Tunisia (‫تونس‬‎)",
+                        "tn",
+                        "216"
+                    ],
+                    [
+                        "Turkey (Türkiye)",
+                        "tr",
+                        "90"
+                    ],
+                    [
+                        "Turkmenistan",
+                        "tm",
+                        "993"
+                    ],
+                    [
+                        "Turks and Caicos Islands",
+                        "tc",
+                        "1649"
+                    ],
+                    [
+                        "Tuvalu",
+                        "tv",
+                        "688"
+                    ],
+                    [
+                        "U.S. Virgin Islands",
+                        "vi",
+                        "1340"
+                    ],
+                    [
+                        "Uganda",
+                        "ug",
+                        "256"
+                    ],
+                    [
+                        "Ukraine (Україна)",
+                        "ua",
+                        "380"
+                    ],
+                    [
+                        "United Arab Emirates (‫الإمارات العربية المتحدة‬‎)",
+                        "ae",
+                        "971"
+                    ],
+                    [
+                        "United Kingdom",
+                        "gb",
+                        "44",
+                        0
+                    ],
+                    [
+                        "United States",
+                        "us",
+                        "1",
+                        0
+                    ],
+                    [
+                        "Uruguay",
+                        "uy",
+                        "598"
+                    ],
+                    [
+                        "Uzbekistan (Oʻzbekiston)",
+                        "uz",
+                        "998"
+                    ],
+                    [
+                        "Vanuatu",
+                        "vu",
+                        "678"
+                    ],
+                    [
+                        "Vatican City (Città del Vaticano)",
+                        "va",
+                        "39",
+                        1
+                    ],
+                    [
+                        "Venezuela",
+                        "ve",
+                        "58"
+                    ],
+                    [
+                        "Vietnam (Việt Nam)",
+                        "vn",
+                        "84"
+                    ],
+                    [
+                        "Wallis and Futuna",
+                        "wf",
+                        "681"
+                    ],
+                    [
+                        "Western Sahara (‫الصحراء الغربية‬‎)",
+                        "eh",
+                        "212",
+                        1
+                    ],
+                    [
+                        "Yemen (‫اليمن‬‎)",
+                        "ye",
+                        "967"
+                    ],
+                    [
+                        "Zambia",
+                        "zm",
+                        "260"
+                    ],
+                    [
+                        "Zimbabwe",
+                        "zw",
+                        "263"
+                    ],
+                    [
+                        "Åland Islands",
+                        "ax",
+                        "358",
+                        1
+                    ]
+                ];
+
+
+                for (var i = 0; i < this.allCountries.length; i++) {
+                    var c = this.allCountries[i];
+                    this.allCountries[i] = {
+                        name: c[0],
+                        iso2: c[1],
+                        dialCode: c[2],
+                        priority: c[3] || 0,
+                        areaCodes: c[4] || null
+                    };
+                }
+
+                return {
+                    allCountries: this.allCountries
+                }
+            }
+        ]);
 })();
 
 (function(){
@@ -7831,9 +9935,13 @@ var app = angular.module('tru.type.lib',
             return function(cfg) {
                 if (cfg.value.$ === null)
                     return null;
-                var item = cfg.type.choices.filter(function (c) {
-                    return c.value.$ === cfg.value.$;
-                });
+                if (cfg.type) {
+                    var item = cfg.type.choices.filter(function (c) {
+                        return c.value.$ === cfg.value.$;
+                    });
+                } else {
+                    return cfg.value.$
+                }
 
                 if (item.length == 0)
                     return null;
@@ -7854,7 +9962,8 @@ var app = angular.module('tru.type.lib',
                     var v = cfg.value.$;
                     if (v === null)
                         return null;
-                    return stdFilter.formatDate(v, 'MM/dd/yyyy');
+                    var utc = new Date(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate());
+                    return stdFilter.formatDate(utc, 'MM/dd/yyyy');
                 };
             }])
 })();
@@ -7960,7 +10069,9 @@ var app = angular.module('tru.type.lib',
 
     module.filter('stdId', [function () {
         return function (cfg) {
-            return cfg.recordId();
+            if (typeof cfg.recordId === 'function')
+                return cfg.recordId();
+            return cfg.value.$;
         };
     }])
 })();
@@ -7975,6 +10086,105 @@ var app = angular.module('tru.type.lib',
             if(v === null)
                 return null;
             return v.toString();
+        };
+    }])
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.formatters');
+
+    module.filter('stdIntlAddressBasic', ['dataService', function (dataService) {
+        var dataContext = dataService.createContext();
+        var queryRunning;
+        return function (cfg) {
+            cfg = cfg.children;
+            var text = '';
+            if (cfg.address1.value.$ !== null)
+                text += cfg.address1.value.$ + ' ';
+            if (cfg.address2.value.$ !== null)
+                text += cfg.address2.value.$ + ' ';
+            if (cfg.country.value.$ !== null)
+                text += cfg.country.value.$ + ' ';
+            if (cfg.city.value.$ !== null)
+                text += cfg.city.value.$ + ' ';
+            if (cfg.stateProvince.value.$ !== null)
+                text += cfg.stateProvince.value.$ + ' ';
+            if (cfg.postalCode.value.$ !== null)
+                text += cfg.postalCode.value.$ + ' ';
+
+            return text;
+        };
+    }])
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.formatters');
+
+    module.filter('stdIntlAddress', ['dataService', function (dataService) {
+        var dataContext = dataService.createContext();
+        var queryRunning;
+        return function (cfg) {
+            cfg = cfg.children;
+            var text = '';
+            if (cfg.address1.value.$ !== null)
+                text += cfg.address1.value.$ + ' ';
+            if (cfg.address2.value.$ !== null)
+                text += cfg.address2.value.$ + ' ';
+            if (cfg.country.value.$ !== null)
+                text += cfg.country.value.$ + ' ';
+            if (cfg.city.value.$ !== null)
+                text += cfg.city.value.$ + ' ';
+            if (cfg.stateProvince.value.$ !== null)
+                text += cfg.stateProvince.value.$ + ' ';
+            if (cfg.postalCode.value.$ !== null)
+                text += cfg.postalCode.value.$ + ' ';
+
+            return text;
+        };
+    }])
+})();
+(function () {
+    'use strict';
+
+    var module = angular.module('std.formatters');
+
+    goog.require('goog.dom');
+    goog.require('goog.json');
+    goog.require('goog.proto2.ObjectSerializer');
+    goog.require('goog.string.StringBuffer');
+    goog.require('i18n.phonenumbers.AsYouTypeFormatter');
+    goog.require('i18n.phonenumbers.PhoneNumberFormat');
+    goog.require('i18n.phonenumbers.PhoneNumberType');
+    goog.require('i18n.phonenumbers.PhoneNumberUtil');
+    goog.require('i18n.phonenumbers.PhoneNumberUtil.ValidationResult');
+
+    module.filter('stdIntlPhone', ['stdCountries', function (countries) {
+        return function (cfg) {
+            var field = cfg;
+            cfg = cfg.children;
+            var text = '';
+            if (cfg.countryCode.value.$ !== null) {
+                var country = _.find(countries.allCountries, function (country) { return country.iso2 === cfg.countryCode.value.$ });
+                var dialCode = country.dialCode;
+                text += '+' + dialCode + ' ';
+            }
+            if (cfg.phone.value.$ !== null) {
+                var clean = cfg.phone.value.$.replace(/[^0-9]/g, '');
+                try {
+                    var phoneUtil = i18n.phonenumbers.PhoneNumberUtil.getInstance();
+                    var PNF = i18n.phonenumbers.PhoneNumberFormat;
+                    var countryCode = cfg.countryCode.value.$ ? cfg.countryCode.value.$ : field.property.countryCode;
+                    var number = phoneUtil.parseAndKeepRawInput(clean, countryCode);
+                    text += phoneUtil.format(number, PNF.NATIONAL) + ' ';
+                } catch(e) {
+                    text += clean + ' ';
+                }
+            }
+            if (cfg.extension.value.$ !== null)
+                text += ' x' + cfg.extension.value.$;
+            return text;
         };
     }])
 })();
@@ -8124,8 +10334,12 @@ var app = angular.module('tru.type.lib',
                     }
                 }
             }
-            if (cfg.zip.value.$ !== null)
-                text += cfg.zip.value.$;
+            if (cfg.zip.value.$ !== null) {
+                if (cfg.zip.value.$.length > 5)
+                    text += cfg.zip.value.$.substring(0, 5) + '-' + cfg.zip.value.$.substring(5);
+                else
+                    text += cfg.zip.value.$;
+            }
             return text;
         };
     }])
@@ -8213,7 +10427,36 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "           data-std-indeterminate=\"field.type.isNullable\"\r" +
     "\n" +
+    "           data-z-validate\r" +
+    "\n" +
     "           type=\"checkbox\">\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
+  $templateCache.put('src/templates/edit/std-country-code-edit.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <div style=\"height:20px\">\r" +
+    "\n" +
+    "        <div style=\"float:left;position:relative;top:50%;transform:translateY(-50%);margin-right:3px;width:20px;\" class=\"iti-flag\" data-ng-class=\"data.selectedCountryIso2\"></div>\r" +
+    "\n" +
+    "        <select data-ng-model=\"data.selectedCountry\"\r" +
+    "\n" +
+    "                data-ng-options=\"x as x.name for x in countries\"\r" +
+    "\n" +
+    "                data-ng-change=\"onChange(data.selectedCountry)\"\r" +
+    "\n" +
+    "                data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
+    "\n" +
+    "                class=\"ttl-dropdown-edit dropdown control\"\r" +
+    "\n" +
+    "                style=\"float:left;width:100px;\">\r" +
+    "\n" +
+    "        </select>\r" +
+    "\n" +
+    "    </div>\r" +
     "\n" +
     "</tru-label>"
   );
@@ -8462,6 +10705,215 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
   );
 
 
+  $templateCache.put('src/templates/edit/std-intl-address-basic-edit.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <div>\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Address 1\" field=\"field.children.address1\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px\">\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Address 2\" field=\"field.children.address2\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px;width:100%;\">\r" +
+    "\n" +
+    "        <div style=\"float:left;width: calc(100% - 375px);height:25px;\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"City\" field=\"field.children.city\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:200px\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"State/Province\" field=\"field.children.stateProvince\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:175px\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"Postal Code\" field=\"field.children.postalCode\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px\">\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Country\" field=\"field.children.country\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
+  $templateCache.put('src/templates/edit/std-intl-address-edit.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <div>\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Address 1\" field=\"field.children.address1\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px\">\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Address 2\" field=\"field.children.address2\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px\">\r" +
+    "\n" +
+    "        <std-dropdown-edit label=\"Country\" field=\"field.children.country\"></std-dropdown-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px;width:100%;\">\r" +
+    "\n" +
+    "        <div style=\"float:left;width: calc(100% - 255px);\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"State/Province\" field=\"field.children.stateProvince\" ng-show=\"showStateProvinceText\"></std-textbox-edit>\r" +
+    "\n" +
+    "            <std-dropdown-edit label=\"State/Province\" field=\"field.children.stateProvince\" ng-show=\"!showStateProvinceText\"></std-dropdown-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:115px\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"City\" field=\"field.children.city\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:140px\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"Postal Code\" field=\"field.children.postalCode\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
+  $templateCache.put('src/templates/edit/std-intl-phone-edit.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <div style=\"width:100%;\">\r" +
+    "\n" +
+    "        <div style=\"float:left;width:105px\">\r" +
+    "\n" +
+    "            <div style=\"height:20px\">\r" +
+    "\n" +
+    "                <!--<div style=\"float:left;position:relative;top:50%;transform:translateY(-50%);margin-right:3px;width:20px;\" class=\"iti-flag\" data-ng-class=\"field.children.countryCode.value.$\"></div>-->\r" +
+    "\n" +
+    "                <select data-ng-model=\"data.selectedCountry\"\r" +
+    "\n" +
+    "                        data-ng-options=\"x as x.name for x in countries\"\r" +
+    "\n" +
+    "                        data-ng-change=\"onCountryCodeChange(data.selectedCountry)\"\r" +
+    "\n" +
+    "                        data-ng-disabled=\"!field.children.countryCode.context.isEditing || !field.children.countryCode.type.canEdit\"\r" +
+    "\n" +
+    "                        class=\"ttl-dropdown-edit dropdown control\"\r" +
+    "\n" +
+    "                        style=\"float:left;width:100px;\">\r" +
+    "\n" +
+    "                </select>\r" +
+    "\n" +
+    "            </div>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width: calc(100% - 220px);\">\r" +
+    "\n" +
+    "            <i tabindex=\"-1\" class=\"icon-phone\" style=\"float:left;margin-right: 3px;margin-left: 0px;margin-top: 2px;\"></i>\r" +
+    "\n" +
+    "            <div style=\"height:18px;width:50px;background-color:#efefef;float:left;border:#cccccc 1px solid;text-align:center;line-height:18px;\">+{{field.property.dialCode}}</div>\r" +
+    "\n" +
+    "            <input data-ng-model=\"field.children.phone.value.$\"\r" +
+    "\n" +
+    "                   data-ng-disabled=\"!field.children.phone.context.isEditing || !field.children.phone.type.canEdit\"\r" +
+    "\n" +
+    "                   data-std-intl-phone\r" +
+    "\n" +
+    "                   data-ng-trim=\"false\"\r" +
+    "\n" +
+    "                   data-z-validate\r" +
+    "\n" +
+    "                   style=\"border-left-width: 0px;float: left;width: calc(100% - 70px);\"\r" +
+    "\n" +
+    "                   type=\"text\"\r" +
+    "\n" +
+    "                    />\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:115px\">\r" +
+    "\n" +
+    "            <div style=\"float:left;margin-right: 1px;margin-left: 3px;width:10px;margin-top:5px;\">x</div>\r" +
+    "\n" +
+    "            <input data-ng-model=\"field.children.extension.value.$\"\r" +
+    "\n" +
+    "                   data-ng-disabled=\"!field.children.extension.context.isEditing || !field.children.extension.type.canEdit\"\r" +
+    "\n" +
+    "                   data-std-number-only\r" +
+    "\n" +
+    "                   maxlength=\"{{field.children.extension.type.property.maxLength}}\"\r" +
+    "\n" +
+    "                   data-ng-trim=\"false\"\r" +
+    "\n" +
+    "                   data-z-validate\r" +
+    "\n" +
+    "                   style=\"float: left;width: 100px;\"\r" +
+    "\n" +
+    "                   type=\"text\"\r" +
+    "\n" +
+    "                    />\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "</tru-label>\r" +
+    "\n" +
+    "\r" +
+    "\n" +
+    "\r" +
+    "\n"
+  );
+
+
+  $templateCache.put('src/templates/edit/std-intl-phone-number-edit.html',
+    "<tru-label label=\"{{label}}\" field=\"field.phone\">\r" +
+    "\n" +
+    "    <div style=\"height:18px;width:50px;background-color:#efefef;float:left;border:#cccccc 1px solid\">{{data.dialCode}}</div>\r" +
+    "\n" +
+    "    <input data-ng-model=\"field.phone.value.$\"\r" +
+    "\n" +
+    "           data-ng-disabled=\"!field.phone.context.isEditing || !field.phone.type.canEdit\"\r" +
+    "\n" +
+    "           maxlength=\"{{field.phone.type.property.maxLength}}\"\r" +
+    "\n" +
+    "           data-ng-trim=\"false\"\r" +
+    "\n" +
+    "           data-z-validate\r" +
+    "\n" +
+    "           style=\"border-left-width: 0px;float: left;width: 200px;\"\r" +
+    "\n" +
+    "           type=\"text\"\r" +
+    "\n" +
+    "            />\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
   $templateCache.put('src/templates/edit/std-link-edit.html',
     "<tru-label label=\"{{label}}\" field=\"field\">\r" +
     "\n" +
@@ -8469,7 +10921,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "       data-ng-disabled=\"!field.type.canEdit\"\r" +
     "\n" +
-    "       href=\"#\">{{field.value.$}}\r" +
+    "       href=\"#\">{{field | stdId}}\r" +
     "\n" +
     "    </a>\r" +
     "\n" +
@@ -8522,6 +10974,29 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "              style=\"width:100%;\">\r" +
     "\n" +
     "    </textarea>\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
+  $templateCache.put('src/templates/edit/std-na-phone-edit.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <input data-ng-model=\"field.value.$\"\r" +
+    "\n" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
+    "\n" +
+    "           data-ng-trim=\"false\"\r" +
+    "\n" +
+    "           data-std-na-phone\r" +
+    "\n" +
+    "           data-z-validate\r" +
+    "\n" +
+    "           placeholder=\"+1 ___-___- ____ x____\"\r" +
+    "\n" +
+    "           type=\"text\"\r" +
+    "\n" +
+    "            />\r" +
     "\n" +
     "</tru-label>"
   );
@@ -8852,17 +11327,13 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <div class=\"ttl-record-picker-wrapper\" data-ng-if=\"!field.context.isGrid\">\r" +
     "\n" +
-    "            <div data-ng-mousedown=\"onInputMousedown()\" style=\"float:left;width:auto;background-color:#fff;\">\r" +
+    "            <div data-ng-mousedown=\"onInputMousedown()\" style=\"float:left;width: calc(100% - 25px);background-color:#fff;\">\r" +
     "\n" +
-    "                <input data-ng-model=\"data.displayValue\"\r" +
+    "                <div class=\"ttl-record-picker-display-value\">\r" +
     "\n" +
-    "                       data-z-validate\r" +
+    "                    <a data-ng-click=\"field.goTo()\" href=\"#\">{{data.displayValue}}</a>\r" +
     "\n" +
-    "                       disabled=\"disabled\"\r" +
-    "\n" +
-    "                       type=\"text\"\r" +
-    "\n" +
-    "                       style=\"background-color:#fff;\"/>\r" +
+    "                </div>\r" +
     "\n" +
     "            </div>\r" +
     "\n" +
@@ -8893,7 +11364,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
   $templateCache.put('src/templates/edit/std-text-edit.html',
     "<tru-label label=\"{{label}}\" field=\"field\">\r" +
     "\n" +
-    "    <p>{{field.value.$}}</p>\r" +
+    "    <p>{{field | stdId}}</p>\r" +
     "\n" +
     "</tru-label>"
   );
@@ -9005,6 +11476,60 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
   );
 
 
+  $templateCache.put('src/templates/edit/std-usa-address-zip-9-edit.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <div>\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Address 1\" field=\"field.children.address1\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px\">\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Address 2\" field=\"field.children.address2\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px;width:100%;\">\r" +
+    "\n" +
+    "        <div style=\"float:left;width: calc(100% - 255px);\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"City\" field=\"field.children.city\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:115px\">\r" +
+    "\n" +
+    "            <std-dropdown-edit label=\"State\" field=\"field.children.state\"></std-dropdown-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:140px\">\r" +
+    "\n" +
+    "            <std-usa-zip-9-edit label=\"Zip\" field=\"field.children.zip\"></std-usa-zip-9-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "</tru-label>\r" +
+    "\n" +
+    "\r" +
+    "\n" +
+    "\r" +
+    "\n" +
+    "\r" +
+    "\n" +
+    "\r" +
+    "\n" +
+    "\r" +
+    "\n" +
+    "\r" +
+    "\n"
+  );
+
+
   $templateCache.put('src/templates/edit/std-usa-dollar-edit.html',
     "<tru-label label=\"{{label}}\" field=\"field\">\r" +
     "\n" +
@@ -9042,6 +11567,31 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "           maxlength=\"5\"\r" +
     "\n" +
     "           placeholder=\"_____\"\r" +
+    "\n" +
+    "           type=\"text\"\r" +
+    "\n" +
+    "            />\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
+  $templateCache.put('src/templates/edit/std-usa-zip-9-edit.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <input data-ng-model=\"field.value.$\"\r" +
+    "\n" +
+    "           data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
+    "\n" +
+    "           data-ng-trim=\"false\"\r" +
+    "\n" +
+    "           data-std-zip\r" +
+    "\n" +
+    "           data-z-validate\r" +
+    "\n" +
+    "           maxlength=\"10\"\r" +
+    "\n" +
+    "           placeholder=\"_________\"\r" +
     "\n" +
     "           type=\"text\"\r" +
     "\n" +
@@ -9661,6 +12211,100 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
   );
 
 
+  $templateCache.put('src/templates/query/std-intl-address-basic-query.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <div>\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Address 1\" field=\"field.children.address1\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px\">\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Address 2\" field=\"field.children.address2\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px\">\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Country\" field=\"field.children.country\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px;width:100%;\">\r" +
+    "\n" +
+    "        <div style=\"float:left;width: calc(100% - 255px);\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"State/Province\" field=\"field.children.stateProvince\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:115px\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"City\" field=\"field.children.city\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:140px\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"Postal Code\" field=\"field.children.postalCode\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
+  $templateCache.put('src/templates/query/std-intl-address-query.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <div>\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Address 1\" field=\"field.children.address1\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px\">\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Address 2\" field=\"field.children.address2\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px\">\r" +
+    "\n" +
+    "        <std-textbox-edit label=\"Country\" field=\"field.children.country\"></std-textbox-edit>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"margin-top:5px;width:100%;\">\r" +
+    "\n" +
+    "        <div style=\"float:left;width: calc(100% - 255px);\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"State/Province\" field=\"field.children.stateProvince\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:115px\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"City\" field=\"field.children.city\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:140px\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"Postal Code\" field=\"field.children.postalCode\"></std-textbox-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
   $templateCache.put('src/templates/query/std-or-list-checkbox-query.html',
     "<tru-label label=\"{{label}}\">\r" +
     "\n" +
@@ -9893,17 +12537,19 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "            </div>\r" +
     "\n" +
-    "            <div data-ng-mousedown=\"onInputMousedown()\" style=\"float:left;width:auto;background-color:#fff;\">\r" +
+    "            <div data-ng-mousedown=\"onInputMousedown()\" style=\"float:left;width: calc(100% - 25px);background-color:#fff;\">\r" +
     "\n" +
     "                <input data-ng-model=\"data.displayValue\"\r" +
     "\n" +
     "                       data-ng-if=\"valueIsUndefined()\"\r" +
     "\n" +
+    "                       data-ng-disabled=\"field.context.isEditing || open\"\r" +
+    "\n" +
     "                       disabled=\"disabled\"\r" +
     "\n" +
     "                       type=\"text\"\r" +
     "\n" +
-    "                       style=\"background-color:#fff;\"/>\r" +
+    "                       />\r" +
     "\n" +
     "            </div>\r" +
     "\n" +
@@ -9985,7 +12631,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    </div>\r" +
     "\n" +
-    "    <div style=\"margin-top:5px;width:100%;\">\r" +
+    "    <div style=\"margin-top:5px;width:100%;height:20px;\">\r" +
     "\n" +
     "        <div style=\"float:left;width: calc(100% - 255px);\">\r" +
     "\n" +

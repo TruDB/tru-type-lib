@@ -1,0 +1,12 @@
+<tru-label label="{{label}}" field="field">
+    <div style="height:20px">
+        <div style="float:left;position:relative;top:50%;transform:translateY(-50%);margin-right:3px;width:20px;" class="iti-flag" data-ng-class="data.selectedCountryIso2"></div>
+        <select data-ng-model="data.selectedCountry"
+                data-ng-options="x as x.name for x in countries"
+                data-ng-change="onChange(data.selectedCountry)"
+                data-ng-disabled="!field.context.isEditing || !field.type.canEdit"
+                class="ttl-dropdown-edit dropdown control"
+                style="float:left;width:100px;">
+        </select>
+    </div>
+</tru-label>

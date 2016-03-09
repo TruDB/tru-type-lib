@@ -1,9 +1,9 @@
 (function(){
     'use strict';
 
-    var module = angular.module('std.link.edit', []);
+    var module = angular.module('std.usa.zip.9.edit', []);
 
-    module.directive('stdLinkEdit',
+    module.directive('stdUsaZip9Edit',
         ['$templateCache', 'stdDisplay',
             function($templateCache, display) {
                 return {
@@ -12,11 +12,8 @@
                         field: '=',
                         label: '@'
                     },
-                    template: $templateCache.get('src/templates/edit/std-link-edit.html'),
+                    template: $templateCache.get('src/templates/edit/std-usa-zip-9-edit.html'),
                     link: function(scope, element) {
-                        scope.goTo = function() {
-
-                        };
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };

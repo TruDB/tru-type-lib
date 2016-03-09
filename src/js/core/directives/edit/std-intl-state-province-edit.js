@@ -1,9 +1,9 @@
 (function(){
     'use strict';
 
-    var module = angular.module('std.link.edit', []);
+    var module = angular.module('std.intl.state.province.edit', []);
 
-    module.directive('stdLinkEdit',
+    module.directive('stdIntlStateProvinceEdit',
         ['$templateCache', 'stdDisplay',
             function($templateCache, display) {
                 return {
@@ -12,11 +12,9 @@
                         field: '=',
                         label: '@'
                     },
-                    template: $templateCache.get('src/templates/edit/std-link-edit.html'),
-                    link: function(scope, element) {
-                        scope.goTo = function() {
+                    template: $templateCache.get('src/templates/edit/std-intl-address-edit.html'),
+                    link: function(scope, element, attrs) {
 
-                        };
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };

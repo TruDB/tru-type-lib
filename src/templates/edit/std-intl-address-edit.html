@@ -1,0 +1,23 @@
+<tru-label label="{{label}}" field="field">
+    <div>
+        <std-textbox-edit label="Address 1" field="field.children.address1"></std-textbox-edit>
+    </div>
+    <div style="margin-top:5px">
+        <std-textbox-edit label="Address 2" field="field.children.address2"></std-textbox-edit>
+    </div>
+    <div style="margin-top:5px">
+        <std-dropdown-edit label="Country" field="field.children.country"></std-dropdown-edit>
+    </div>
+    <div style="margin-top:5px;width:100%;">
+        <div style="float:left;width: calc(100% - 255px);">
+            <std-textbox-edit label="State/Province" field="field.children.stateProvince" ng-show="showStateProvinceText"></std-textbox-edit>
+            <std-dropdown-edit label="State/Province" field="field.children.stateProvince" ng-show="!showStateProvinceText"></std-dropdown-edit>
+        </div>
+        <div style="float:left;width:115px">
+            <std-textbox-edit label="City" field="field.children.city"></std-textbox-edit>
+        </div>
+        <div style="float:left;width:140px">
+            <std-textbox-edit label="Postal Code" field="field.children.postalCode"></std-textbox-edit>
+        </div>
+    </div>
+</tru-label>
