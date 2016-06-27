@@ -1,0 +1,439 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<alias-catalog
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation='http://www.arkware.com/ ../Schema/AliasCatalog.xsd'>
+  <aliases type="search-control">
+    <!--<alias name="is-null">
+      <directive name="std-is-null-query"/>
+    </alias>-->
+    <!--<alias name="fkey-value">
+      <directive name="std-fkey-value-query"/>
+    </alias>
+    <alias name="text-unary">
+      <directive name="std-text-unary-query"/>
+    </alias>-->
+    <alias name="text">
+      <directive name="std-textbox-query"/>
+    </alias>
+    <!--<alias name="date">
+      <directive name="std-date-query"/>
+    </alias>
+    <alias name="date-range">
+      <directive name="std-date-range-query"/>
+    </alias>
+    <alias name="time">
+      <directive name="std-time-query"/>
+    </alias>
+    <alias name="time-range">
+      <directive name="std-time-range-query"/>
+    </alias>
+    <alias name="datetime">
+      <directive name="std-datetime-query"/>
+    </alias>
+    <alias name="datetime-range">
+      <directive name="std-datetime-range-query"/>
+    </alias>
+    <alias name="timespan">
+      <directive name="std-timespan-query"/>
+    </alias>
+    <alias name="datetimespan">
+      <directive name="std-datetimespan-query"/>
+    </alias>-->
+    <alias name="datespan">
+      <directive name="std-date-span-query"/>
+    </alias>
+    <!--<alias name="filtered-text">
+      <directive name="std-filtered-text-query"/>
+    </alias>-->
+    <alias name="filtered-text-edit">
+      <directive name="std-filtered-text-edit"/>
+    </alias>
+    <alias name="multiline-text-edit">
+      <directive name="std-multiline-edit"/>
+    </alias>
+    <!--<alias name="integer">
+      <directive name="std-integer-query"/>
+    </alias>
+    <alias name="integer-range">
+      <directive name="std-integer-range-query"/>
+    </alias>
+    <alias name="decimal">
+      <directive name="std-decimal-query"/>
+    </alias>
+    <alias name="decimal-range">
+      <directive name="std-decimal-range-query"/>
+    </alias>-->
+    <alias name="usa-dollars">
+      <directive name="std-usa-dollar-query"/>
+    </alias>
+    <alias name="usa-dollars-range">
+      <directive name="std-usa-dollar-range-query"/>
+    </alias>
+    <!--<alias name="float">
+      <directive name="std-float-query"/>
+    </alias>
+    <alias name="float-range">
+      <directive name="std-float-range-query"/>
+    </alias>
+    <alias name="percentage">
+      <directive name="std-percent-query"/>
+    </alias>
+    <alias name="percentage-range">
+      <directive name="std-percent-range-query"/>
+    </alias>
+    <alias name="dropdown">
+      <directive name="std-dropdown-query"/>
+    </alias>
+    <alias name="radio-button-list">
+      <directive name="std-radio-button-list-query"/>
+    </alias>-->
+    <alias name="or-checkbox-list">
+      <directive name="std-or-list-checkbox-query"/>
+    </alias>
+    <!--<alias name="checkbox">
+      <directive name="std-checkbox-query"/>
+    </alias>-->
+    <alias name="tristate-checkbox">
+      <directive name="std-checkbox-query"/>
+    </alias>
+    <!--<alias name="boolean-dropdown">
+      <directive name="std-boolean-dropdown-query"/>
+    </alias>-->
+    <alias name="usa-address5">
+      <directive name="std-usa-address-query"/>
+    </alias>
+    <alias name="usa-address9">
+      <directive name="std-usa-address-query"/>
+    </alias>
+    <!--<alias name="intl-address-basic">
+      <directive name="std-intl-address-basic-query"/>
+    </alias>-->
+    <!--<alias name="record-picker">
+      <directive name="std-record-picker-query"/>
+    </alias>-->
+  </aliases>
+  <aliases type="list-control">
+    <!--<alias name="link">
+      <directive name="std-link-list"/>
+    </alias>
+    <alias name="checkbox">
+      <directive name="std-checkbox-list"/>
+    </alias>-->
+    <alias name="tristate-checkbox">
+      <directive name="std-checkbox-list"/>
+    </alias>
+    <!--<alias name="fileicon">
+      <directive name="std-fileicon-list"/>
+    </alias>
+    <alias name="thumbnail">
+      <directive name="std-thumbnail-list"/>
+    </alias>-->
+  </aliases>
+  <aliases type="edit-control">
+    <alias name="label">
+      <directive name="std-text-edit"/>
+    </alias>
+    <!--<alias name="link">
+      <directive name="std-link-edit"/>
+    </alias>-->
+    <alias name="text">
+      <directive name="std-textbox-edit"/>
+    </alias>
+    <!--<alias name="date">
+      <directive name="std-date-edit"/>
+    </alias>
+    <alias name="time">
+      <directive name="std-time-edit"/>
+    </alias>
+    <alias name="datetime">
+      <directive name="std-datetime-edit"/>
+    </alias>
+    <alias name="timespan">
+      <directive name="std-timespan-edit"/>
+    </alias>-->
+    <alias name="datetimespan">
+      <directive name="std-datetime-span-edit"/>
+      <requires-adorning/>
+    </alias>
+    <!--<alias name="filtered-text">
+      <directive name="std-filtered-text-edit"/>
+    </alias>-->
+    <alias name="multiline-text">
+      <directive name="std-multiline-edit"/>
+      <requires-adorning/>
+    </alias>
+    <!--<alias name="integer">
+      <directive name="std-integer-edit"/>
+    </alias>
+    <alias name="decimal">
+      <directive name="std-decimal-edit"/>
+    </alias>-->
+    <alias name="usa-dollars">
+      <directive name="std-usa-dollar-edit"/>
+    </alias>
+    <!--<alias name="float">
+      <directive name="std-float-edit"/>
+    </alias>-->
+    <alias name="percentage">
+      <directive name="std-percent-edit"/>
+    </alias>
+    <!--<alias name="dropdown">
+      <directive name="std-dropdown-edit"/>
+    </alias>
+    <alias name="radio-button-list">
+      <directive name="std-radio-button-list-edit"/>
+    </alias>
+    <alias name="checkbox">
+      <directive name="std-checkbox-edit"/>
+    </alias>-->
+    <alias name="tristate-checkbox">
+      <directive name="std-checkbox-edit"/>
+    </alias>
+    <alias name="usa-address5">
+      <directive name="std-usa-address-edit"/>
+      <requires-adorning/>
+    </alias>
+    <alias name="usa-address9">
+      <directive name="std-usa-address-zip-9-edit"/>
+      <requires-adorning/>
+    </alias>
+    <!--<alias name="intl-address-basic">
+      <directive name="std-intl-address-basic-edit"/>
+    </alias>-->
+    <!--<alias name="password">
+      <directive name="std-password-edit"/>
+    </alias>-->
+    <alias name="file">
+      <!--<directive name="std-file-edit"/>-->
+      <requires-adorning/>
+    </alias>
+    <alias name="picture">
+      <!--<directive name="std-picture-edit"/>-->
+      <requires-adorning/>
+    </alias>
+    <!--<alias name="record-picker">
+      <directive name="std-record-picker-edit"/>
+    </alias>-->
+  </aliases>
+  <aliases type="formatter">
+    <!--<alias name="ref">
+      <filter name="stdRef"/>
+    </alias>
+    <alias name="id">
+      <filter name="stdId"/>
+    </alias>
+    <alias name="choice-label">
+      <filter name="stdChoiceLabel"/>
+    </alias>
+    <alias name="text">
+      <filter name="stdText"/>
+    </alias>
+    <alias name="text-custom">
+      <filter name="stdTextCustom"/>
+    </alias>
+    <alias name="integer">
+      <filter name="stdInteger"/>
+    </alias>
+    <alias name="decimal">
+      <filter name="stdDecimal"/>
+    </alias>
+    <alias name="float">
+      <filter name="stdFloat"/>
+    </alias>
+    <alias name="float-scientific-notation">
+      <filter name="stdFloatScientificNotation"/>
+    </alias>
+    <alias name="percentage">
+      <filter name="stdPercentage"/>
+    </alias>
+    <alias name="usa-dollars">
+      <filter name="stdUsaDollars"/>
+    </alias>
+    <alias name="number-custom">
+      <filter name="stdNumberCustom"/>
+    </alias>
+    <alias name="boolean">
+      <filter name="stdBoolean"/>
+    </alias>
+    <alias name="date-short">
+      <filter name="stdDateShort"/>
+    </alias>
+    <alias name="date-long">
+      <filter name="stdDateLong"/>
+    </alias>
+    <alias name="time-short">
+      <filter name="stdTimeShort"/>
+    </alias>
+    <alias name="time-long">
+      <filter name="stdTimeLong"/>
+    </alias>
+    <alias name="datetime-short">
+      <filter name="stdDatetimeShort"/>
+    </alias>
+    <alias name="datetime-short-date-long-time">
+      <filter name="stdDatetimeShortDateLongTime"/>
+    </alias>
+    <alias name="datetime-long-date-short-time">
+      <filter name="stdDatetimeLongDateShortTime"/>
+    </alias>
+    <alias name="datetime-long">
+      <filter name="stdDatetimeLong"/>
+    </alias>
+    <alias name="datetime-short-date-only">
+      <filter name="stdDatetimeShortDateOnly"/>
+    </alias>
+    <alias name="datetime-long-date-only">
+      <filter name="stdDatetimeLongDateOnly"/>
+    </alias>
+    <alias name="datetime-short-time-only">
+      <filter name="stdDatetimeShortTimeOnly"/>
+    </alias>
+    <alias name="datetime-long-time-only">
+      <filter name="stdDatetimeLongTimeOnly"/>
+    </alias>
+    <alias name="datetime-custom">
+      <filter name="stdDatetimeCustom"/>
+    </alias>-->
+    <alias name="timespan-fractional-hours">
+      <filter name="stdTimeSpanFractionalHours"/>
+    </alias>
+    <alias name="timespan-hh-mm-ss">
+      <filter name="stdTimeSpanHhMmSs"/>
+    </alias>
+    <alias name="timespan-dd-hh-mm-ss">
+      <filter name="stdTimeSpanDdHhMmSs"/>
+    </alias>
+    <alias name="timespan-dd-hh-mm-ss-ff">
+      <filter name="stdTimeSpanDdHhMmSsFf"/>
+    </alias>
+    <alias name="timespan-custom">
+      <filter name="stdTimeSpanCustom"/>
+    </alias>
+    <alias name="datetimespan-short">
+      <filter name="stdDatetimeSpanShort"/>
+    </alias>
+    <alias name="datetimespan-short-start-date-duration-fractional-hours">
+      <filter name="stdDatetimeSpanShortStartDateDurationFractionalHours"/>
+    </alias>
+    <alias name="datetimespan-short-start-date-duration-hh-mm">
+      <filter name="stdDatetimeSpanShortStartDateDurationHhMm"/>
+    </alias>
+    <alias name="datetimespan-custom">
+      <filter name="stdDatetimeSpanCustom"/>
+    </alias>
+    <!--<alias name="usa-zip">
+      <filter name="stdUsaZip"/>
+    </alias>
+    <alias name="usa-social-security">
+      <filter name="stdUsaSocialSecurity"/>
+    </alias>
+    <alias name="usa-address">
+      <filter name="stdUsaAddress"/>
+    </alias>
+    <alias name="usa-address-multiline">
+      <filter name="stdUsaAddressMultiline"/>
+    </alias>
+    <alias name="usa-address-custom">
+      <filter name="stdUsaAddressCustom"/>
+    </alias>-->
+    <alias name="password-eight-bullets">
+      <filter name="stdPassword"/>
+    </alias>
+    <!--<alias name="file">
+      <filter name="stdFile"/>
+    </alias>
+    <alias name="picture">
+      <filter name="stdPicture"/>
+    </alias>-->
+  </aliases>
+  <!--<aliases type="parser">
+    <alias name="boolean-parser">
+      <function name="std-boolean-parser"/>
+    </alias>
+    <alias name="boolean-nullable-parser">
+      <function name="std-boolean-nullable-parser"/>
+    </alias>
+    <alias name="integer-parser">
+      <function name="std-integer-parser"/>
+    </alias>
+    <alias name="decimal-parser">
+      <function name="std-decimal-parser"/>
+    </alias>
+    <alias name="percentage-parser">
+      <function name="std-percentage-parser"/>
+    </alias>
+    <alias name="floating-point-parser">
+      <function name="std-floating-point-parser"/>
+    </alias>
+    <alias name="money-parser">
+      <function name="std-money-parser"/>
+    </alias>
+    <alias name="date-parser">
+      <function name="std-date-parser"/>
+    </alias>
+    <alias name="time-parser">
+      <function name="std-time-parser"/>
+    </alias>
+    <alias name="datetime-parser">
+      <function name="std-datetime-parser"/>
+    </alias>
+    <alias name="timespan-parser">
+      <function name="std-timespan-parser"/>
+    </alias>
+    <alias name="datetimespan-parser">
+      <function name="std-datetimespan-parser"/>
+    </alias>
+    <alias name="usa-address-5-parser">
+      <function name="std-usa-address-5-parser"/>
+    </alias>
+    <alias name="usa-address-9-parser">
+      <function name="std-usa-address-9-parser"/>
+    </alias>
+    <alias name="password-parser">
+      <function name="std-password-parser"/>
+    </alias>
+  </aliases>
+  <aliases type="getter">
+    <alias name="text-bounded-length">
+      <function name="std-get-text-bounded-length"/>
+    </alias>
+    <alias name="text-unbounded-length">
+      <function name="std-get-text-unbounded-length"/>
+    </alias>
+    <alias name="timespan-days">
+      <function name="std-get-timespan-days"/>
+    </alias>
+    <alias name="timespan-hours">
+      <function name="std-get-timespan-hours"/>
+    </alias>
+    <alias name="timespan-minutes">
+      <function name="std-get-timespan-minutes"/>
+    </alias>
+    <alias name="timespan-seconds">
+      <function name="std-get-timespan-seconds"/>
+    </alias>
+    <alias name="timespan-milliseconds">
+      <function name="std-get-timespan-milliseconds"/>
+    </alias>
+    <alias name="datetimespan-timespan">
+      <function name="std-get-datetimespan-timespan"/>
+    </alias>
+    <alias name="datetimespan-duration">
+      <function name="std-get-datetimespan-duration"/>
+    </alias>
+    <alias name="file-length">
+      <function name="std-get-file-length"/>
+    </alias>
+    <alias name="picture-length">
+      <function name="std-get-picture-length"/>
+    </alias>
+  </aliases>
+  <aliases type="setter">
+    <alias name="datetimespan-timespan">
+      <function name="std-set-datetimespan-timespan"/>
+    </alias>
+    <alias name="datetimespan-duration">
+      <function name="std-set-datetimespan-duration"/>
+    </alias>
+  </aliases>-->
+</alias-catalog>

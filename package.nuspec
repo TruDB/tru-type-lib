@@ -1,32 +1,30 @@
 <?xml version="1.0" encoding="utf-8"?>
 <package xmlns="http://schemas.microsoft.com/packaging/2011/08/nuspec.xsd">
     <metadata>
-        <id>TruDB.Std</id>
+        <id>TruDB.Std.HTML5</id>
         <version>$version$</version>
-        <title>TruDB Standard Type Library</title>
+        <title>TruDB Standard Type Library for HTML5</title>
         <authors>Arkware,Inc.</authors>
         <owners>Arkware,Inc.</owners>
         <licenseUrl>http://www.arkware.com</licenseUrl>
         <projectUrl>http://www.arkware.com</projectUrl>
         <iconUrl>http://www.arkware.com</iconUrl>
         <requireLicenseAcceptance>false</requireLicenseAcceptance>
-        <description>Extends TruDB with the standard data types.</description>
+        <description>Extends TruDB with the standard data types for the HTML5 target.</description>
         <releaseNotes></releaseNotes>
         <copyright>Copyright 2016</copyright>
         <tags>TruDB DataType</tags>
-        <!--<dependencies>
-          <dependency id="TruDB.Std.EfMssql"/>
-        </dependencies>-->
+        <dependencies>
+          <dependency id="TruDB.Std" version="2.0.0.0"/>
+        </dependencies>
     </metadata>
     <files>
-        <file src="tru-type-lib.js" target="client\tru.type.lib.module.js" />
-        <file src="tru-type-lib.css" target="client\tru.type.lib.css" />
-        <file src="icomoon.eot" target="client\icomoon.eot" />
-        <file src="icomoon.svg" target="client\icomoon.svg" />
-        <file src="icomoon.ttf" target="client\icomoon.ttf" />
-        <file src="icomoon.woff" target="client\icomoon.woff" />
-        <file src="Standard.manifest.xml" target="codegen\std.manifest.xml" />
-        <file src="HTML5.alias.xml" target="codegen\std.html5.alias.xml" />
-        <file src="dotNET.alias.xml" target="codegen\std.dot-net.alias.xml" />
+        <file src="dist\tru-type-lib.js" target="runtime\html5\tru.type.lib.module.js" />
+        <file src="dist\tru-type-lib.css" target="runtime\html5\tru.type.lib.css" />
+        <file src="fonts\icomoon.eot" target="runtime\html5\icomoon.eot" />
+        <file src="fonts\icomoon.svg" target="runtime\html5\icomoon.svg" />
+        <file src="fonts\icomoon.ttf" target="runtime\html5\icomoon.ttf" />
+        <file src="fonts\icomoon.woff" target="runtime\html5\icomoon.woff" />
+        <file src="dist\alias.xml" target="codegen\html5\std.alias.xml" />
     </files>
 </package>
