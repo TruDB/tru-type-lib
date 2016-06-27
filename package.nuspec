@@ -15,7 +15,7 @@
         <copyright>Copyright 2016</copyright>
         <tags>TruDB DataType</tags>
         <dependencies>
-          <dependency id="TruDB.Std" version="2.0.0.0"/>
+          <dependency id="TruDB.Std" version="2.0.0"/>
         </dependencies>
     </metadata>
     <files>
