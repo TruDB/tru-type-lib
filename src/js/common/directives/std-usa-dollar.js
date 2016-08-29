@@ -21,6 +21,7 @@
                         var wholePlaces = 38 - decimalPlaces;
 
                         ngModelCtrl.$formatters.push(function (val) {
+                            if (val === null) return val;
                             return '$' + val.toFixed(2);
                         });
 

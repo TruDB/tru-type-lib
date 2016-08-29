@@ -82,6 +82,7 @@
 
                 self.cleanUp = function () {
                     $scope.open = false;
+                    $scope.subview = null;
                     $timeout(function () {
                         $element[0].querySelectorAll('button')[0].focus();
                     });
@@ -91,9 +92,8 @@
                 self.showRecordPickerModal = function () {
                     $scope.open = true;
                     $timeout(function () {
-                        var promise = modal.open(
-                            'recordPicker'
-                        );
+                        $scope.subview = 'recordPicker';
+                        var promise = modal.open();
                         promise.then(
                             function handleResolve(response) {
                                 $scope.field.value.$ = response;
@@ -127,6 +127,10 @@
                 $scope.onKeydown = function (e) {
                     if (!$scope.open && e.keyCode === 13)
                         self.showRecordPickerModal();
+                    if (e.ctrlKey && e.keyCode === 71) {
+                        e.preventDefault();
+                        $scope.goTo();
+                    }
                 };
 
                 $scope.showArrow = false;
@@ -137,6 +141,21 @@
                         $scope.showArrow = false;
                     }, 5000);
                 };
+
+                var goToFnExists = typeof $scope.field.goTo === 'function';
+                var hasRoleFnExists = typeof $scope.field.hasRole === 'function';
+                var hasRole = !hasRoleFnExists || $scope.field.hasRole();
+
+                $scope.goTo = function() {
+                    if (goToFnExists && hasRoleFnExists && hasRole) {
+                        $scope.field.goTo();
+                    }
+                };
+
+                $scope.showLink = false;
+                var isNotGrid = typeof $scope.field.context.isGrid === 'undefined';
+                if (goToFnExists && isNotGrid && hasRole)
+                    $scope.showLink = true;
 
                 $scope.$watch('field.value.$', function () { self.init(); });
             }]);
@@ -153,6 +172,32 @@
                     controller: 'stdRecordPickerEditController',
                     template: $templateCache.get('src/templates/edit/std-record-picker-edit.html'),
                     link: function (scope, element) {
+                        $timeout(function() {
+                            var link = element[0].querySelectorAll('a')[0];
+                            var linkContainer = element[0].querySelectorAll('.ttl-record-picker-display-value')[0];
+                            angular.element(link).bind('keydown', function (e) {
+                                if (e.ctrlKey && e.keyCode === 71) {
+                                    e.preventDefault();
+                                        scope.goTo();
+                                    $timeout(function() {
+                                        select.focus();
+                                    });
+                                }
+                            });
+
+                            angular.element(linkContainer).bind('keydown', function (e) {
+                                if (e.ctrlKey && e.keyCode === 71) {
+                                    e.preventDefault();
+                                    scope.goTo();
+                                    $timeout(function() {
+                                        select.focus();
+                                    });
+                                }
+                            });
+                            angular.element(link).bind('mousedown', function (e) {
+                               link.focus();
+                            });
+                        });
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };

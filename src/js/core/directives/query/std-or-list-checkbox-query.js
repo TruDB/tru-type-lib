@@ -7,8 +7,10 @@
         function ($scope, operatorLookup, util) {
             var ctrlValue = $scope.field.property.value ? $scope.field.property.value : [];
             var ctrlDefault = $scope.field.property.default ? $scope.field.property.default : [];
+            var ctrlLabelDefault = $scope.field.property.labelDefault ? $scope.field.property.labelDefault : [];
             var ctrlValueHasValue = ctrlValue.length > 0;
             var ctrlDefaultHasValue = ctrlDefault.length > 0;
+            var ctrlLabelDefaultHasValue = ctrlLabelDefault.length > 0;
             var operator = operatorLookup[$scope.field.property.operator].operator;
             var unregOnChoicesChange = undefined;
 
@@ -63,6 +65,8 @@
                         }
                     } else if (ctrlDefaultHasValue) {
                         choice["checked"] = ctrlDefault.indexOf(choice.value.$.toString()) !== -1;
+                    }  else if (ctrlLabelDefaultHasValue) {
+                        choice["checked"] = ctrlLabelDefault.indexOf(choice.label) !== -1;
                     } else {
                         choice["checked"] = false;
                     }
@@ -131,11 +135,20 @@
                         field: '=',
                         label: '@'
                     },
-                    require: '^truSearchGroup',
+                    require: ['^truSearchGroup', '^truLabelContainer'],
                     template: $templateCache.get('src/templates/query/std-or-list-checkbox-query.html'),
                     controller: 'stdOrListCheckboxQueryController',
-                    link: function (scope, element, attrs, searchGroupCtrl) {
-                        scope.searchGroupCtrl = searchGroupCtrl;
+                    link: function (scope, element, attrs, ctrls) {
+                        scope.searchGroupCtrl = ctrls[0];
+                        scope.labelContainerCtrl = ctrls[1];
+
+                        var labels = element[0].querySelectorAll('label');
+
+                        if (ctrls[1]) {
+                            for (var i = 0; i < labels.length; i++) {
+                                ctrls[1].addLabel(labels[i]);
+                            }
+                        }
                         scope.init();
                     }
                 };

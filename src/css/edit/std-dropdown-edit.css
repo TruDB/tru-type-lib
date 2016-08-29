@@ -2,7 +2,21 @@
 std-dropdown-edit - styles
 ------------------------------------------------------------------------ */
 
+.ttl-dropdown-edit {
+    float: left;
+    width: calc(100% - 25px)
+}
+
+.ttl-dropdown-edit-no-button {
+    width: 100%;
+}
+
 .ttl-dropdown-edit option {
     font-family: Calibri, Helvetica, Arial, sans-serif;
     font-size: 14px;
+}
+
+.ttl-dropdown-edit-wrapper {
+    width: 100% !important;
+    display: inline-flex;
 }

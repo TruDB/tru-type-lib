@@ -1,16 +1,15 @@
 (function(){
     'use strict';
 
-    var module = angular.module('std.dropdown.query', []);
+    var module = angular.module('std.null.not.null.query', []);
 
-    module.controller('stdDropdownQueryController', ['$scope', 'stdOperatorLookup', 'stdUtil',
+    module.controller('stdNullNotNullController', ['$scope', 'stdOperatorLookup', 'stdUtil',
         function ($scope, operatorLookup, util) {
             var ctrlValue = $scope.field.property.value;
             var ctrlDefault = $scope.field.property.default;
             var ctrlValueHasValue = typeof ctrlValue !== 'undefined';
             var ctrlDefaultHasValue = typeof ctrlDefault !== 'undefined';
             var operator = operatorLookup[$scope.field.property.operator].operator;
-            var unregOnChoicesChange = undefined;
 
             var onClearCB = function(){
                 return function() {
@@ -35,9 +34,12 @@
                 var value = $scope.field.value.$;
                 var queryPredicate = $scope.field.queryPredicate;
                 if (typeof value !== 'undefined') {
-                    if (typeof value === 'string')
-                        value = "'" + value + "'";
-                    queryPredicate.set('', operator, value);
+                    if (value) {
+                        operator = 'ne';
+                    } else {
+                        operator = 'eq';
+                    }
+                    queryPredicate.set('', operator, null);
                 } else {
                     queryPredicate.clear();
                 }
@@ -48,15 +50,10 @@
                 label: undefined
             };
 
-            var loadChoices = function(choices) {
-                if (choices == null) return;
-                $scope.data.choices = angular.copy(choices);
-
+            var loadChoices = function() {
+                $scope.data.choices.push({label: 'Is Set', value: {$: 1}});
+                $scope.data.choices.push({label: 'Is Not Set', value: {$: 0}});
                 $scope.data.choices.unshift({label: '', value: {$: undefined}});
-
-                if ($scope.field.type.isNullable) {
-                    $scope.data.choices.push({label: 'Null', value: {$: 'null'}});
-                }
 
                 if (ctrlValueHasValue) {
                     $scope.data.label = $scope.data.choices.filter(function (obj) {
@@ -85,28 +82,23 @@
                 $scope.updateQueryPredicate();
             };
 
-            $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
-            $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
+            $scope.operatorImage = operatorLookup['equal'].operatorImage;
+            $scope.operatorImageMessage = operatorLookup['equal'].operatorImageMessage;
 
             if(ctrlValue === null) {
                 $scope.data.label = 'Null';
                 $scope.field.value.$ = null;
                 $scope.updateQueryPredicate();
-            } else {
-                unregOnChoicesChange = $scope.field.onChoicesChanged(loadChoices);
             }
-
-            $scope.$on("$destroy", function () {
-                unregOnChoicesChange();
-            });
 
             $scope.init = function() {
                 $scope.searchGroupCtrl.registerClear(onClearCB);
                 $scope.searchGroupCtrl.registerDefault(onDefaultCB);
+                loadChoices();
             };
         }]);
 
-    module.directive('stdDropdownQuery',
+    module.directive('stdNullNotNullQuery',
         ['$templateCache', '$timeout',
             function ($templateCache, $timeout) {
                 return {
@@ -116,19 +108,15 @@
                         label: '@'
                     },
                     require: '^truSearchGroup',
-                    template: $templateCache.get('src/templates/query/std-dropdown-query.html'),
-                    controller: 'stdDropdownQueryController',
+                    template: $templateCache.get('src/templates/query/std-null-not-null-query.html'),
+                    controller: 'stdNullNotNullController',
                     link: function (scope, element, attrs, searchGroupCtrl) {
                         $timeout(function() {
                             var select = element[0].querySelectorAll('select')[0];
 
                             angular.element(select).bind('keydown', function (e) {
                                 if (e.keyCode === 46) {
-                                    if (scope.field.type.isNullable) {
-                                        scope.field.value.$ = 'null';
-                                    } else {
-                                        scope.field.value.$ = undefined;
-                                    }
+                                    scope.field.value.$ = undefined;
                                 }
                                 scope.updateQueryPredicate();
                             });

@@ -38,6 +38,42 @@
                 }
             }();
 
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+
+                if (value && util.isDate(value)) {
+                    var predicates = [];
+                    var startValue = new Date(value);
+                    var endValue = new Date(value);
+                    if (operator === 'eq') {
+                        startValue.setHours(0,0,0,0);
+                        endValue.setHours(23,59,59,999);
+                        predicates.push(queryPredicate.create('', 'gt', startValue));
+                        predicates.push(queryPredicate.create('', 'lt', endValue));
+                        queryPredicate.set(predicates[0].and(predicates[1]));
+                    }
+                    if (operator === 'lt') {
+                        startValue.setHours(0,0,0,0);
+                        queryPredicate.set('', 'lt', startValue);
+                    }
+                    if (operator === 'gt') {
+                        startValue.setHours(23,59,59,999);
+                        queryPredicate.set('', 'gt', startValue);
+                    }
+                    if (operator === 'le') {
+                        startValue.setHours(23,59,59,999);
+                        queryPredicate.set('', 'le', startValue);
+                    }
+                    if (operator === 'ge') {
+                        startValue.setHours(0,0,0,0);
+                        queryPredicate.set('', 'ge', startValue);
+                    }
+                } else {
+                    queryPredicate.clear();
+                }
+            };
+
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
             $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
 

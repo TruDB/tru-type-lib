@@ -56,7 +56,7 @@
                     var firstChar = selector.charAt(0);
                     for (; element && element !== document; element = element.parentNode) {
                         if (firstChar === '.') {
-                            if (element.classList.contains(selector.substr(1))) {
+                            if (element.classList && element.classList.contains(selector.substr(1))) {
                                 return element;
                             }
                         }

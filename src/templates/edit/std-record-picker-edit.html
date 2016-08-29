@@ -12,7 +12,7 @@
              class="ttl-modal">
             <div style="position:absolute;top:0;left:0;right:0;height:30px;">
                 <h4 style="margin-left: 5px;margin-top: 5px;float:left;">
-                    {{title}} Picker
+                    {{title}}
                 </h4>
                 <button type="button" style="float:right;font-size:12px;padding:0;margin-right: 5px;margin-top: 5px;" class="desktop-btn desktop-btn-default desktop-window-close-button excluded" data-ng-class="{'desktop-window-close-button': window.active}" title="Close Dialog - [ESC]" data-ng-click="cancel($event)" tabindex="-1">
                     <span class="desktop-icon-close"></span>
@@ -56,18 +56,20 @@
     </div>
     <tru-label field="field" label="{{label}}">
         <div class="ttl-record-picker-wrapper" data-ng-if="!field.context.isGrid">
-            <div data-ng-mousedown="onInputMousedown()" style="float:left;width: calc(100% - 25px);background-color:#fff;">
-                <div class="ttl-record-picker-display-value">
-                    <a data-ng-click="field.goTo()" href="#">{{data.displayValue}}</a>
+            <div data-ng-mousedown="onInputMousedown()" data-ng-class="showLink ? 'ttl-record-picker-display-value-wrapper' : 'ttl-record-picker-display-value-wrapper-no-button'">
+                <div class="ttl-record-picker-display-value" tabindex="-1">
+                    <a data-ng-click="goTo()" href="#" data-ng-show="showLink">{{data.displayValue}}</a>
+                    <p data-ng-show="!showLink" style="line-height:6px;">{{data.displayValue}}</p>
                 </div>
             </div>
             <button data-ng-click="onClick()"
                     data-ng-keydown="onKeydown($event)"
                     data-ng-disabled="!field.context.isEditing || !field.type.canEdit || open"
+                    data-ng-show="showLink"
                     class="tvl-btn"
                     style="float:left;height:20px;width:25px;padding:0;position:relative;"
-                    >...
-                <i style="color:green;margin-left:5px;margin-top:3px;position:absolute;z-index:5;top:0;left:-20px;" class="ttl-date-button-icon icon-arrow-right animated shake" data-ng-show="showArrow"></i>
+                    ><i class="icon-search icon-flip-horizontal"></i>
+                <i style="color:green;margin-left:5px;margin-top:3px;position:absolute;z-index:5;top:0;left:-20px;" class="ttl-date-button-icon icon-arrow-right animated shake" data-ng-show="showArrow && showLink"></i>
             </button>
         </div>
     </tru-label>

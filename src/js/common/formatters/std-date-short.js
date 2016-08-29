@@ -8,7 +8,7 @@
             function (stdFilter) {
                 return function (cfg) {
                     var v = cfg.value.$;
-                    if (v === null)
+                    if (v === null || typeof v === 'undefined')
                         return null;
                     var utc = new Date(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate());
                     return stdFilter.formatDate(utc, 'MM/dd/yyyy');

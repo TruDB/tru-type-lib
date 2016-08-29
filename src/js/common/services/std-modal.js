@@ -30,8 +30,6 @@
                         previousDeferred.reject();
                     }
 
-                    $rootScope.$emit('modal.open', type);
-
                     return(modal.deferred.promise);
                 }
 

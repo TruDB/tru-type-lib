@@ -8,17 +8,7 @@
                 data-ng-show="data.show"
                 data-z-validate
                 class=" dropdown control"
-                data-ng-class="showGoTo ? 'ttl-dropdown-edit' : 'ttl-dropdown-edit-no-button'">
+                data-ng-class="showGoTo() ? 'ttl-dropdown-edit' : 'ttl-dropdown-edit-no-button'">
         </select>
-        <button data-ng-click="goTo()"
-                data-ng-show="showGoTo"
-                data-ng-cloak
-                data-ng-style="showGoTo ? {'display': 'block'} : {'display': 'none'}"
-                class="tvl-btn"
-                style="float:left;height:20px;width:25px;padding:0;position:relative;display:none;"
-                type="button"
-                >
-            <i style="" class="icon-external-link"></i>
-        </button>
     </div>
 </tru-label>

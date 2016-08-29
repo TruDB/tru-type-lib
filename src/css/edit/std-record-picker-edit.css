@@ -11,6 +11,15 @@ Record-Picker-Edit Styles
     display: inline-flex;
 }
 
+.ttl-record-picker-display-value-wrapper {
+    float: left;
+    width: calc(100% - 25px)
+}
+
+.ttl-record-picker-display-value-wrapper-no-button {
+    width: 100%;
+}
+
 .ttl-record-picker-display-value {
     width: 100%;
     -webkit-border-radius: 0;
@@ -36,4 +45,13 @@ Record-Picker-Edit Styles
     margin-bottom: 0px;
     color: #000000;
     vertical-align: middle;
+}
+
+.ttl-record-picker-display-value:focus {
+    border-color: rgba(82,168,236,.8);
+    outline: 0;
+    outline: thin dotted \9;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(82,168,236,.6);
+    -moz-box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(82,168,236,.6);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(82,168,236,.6);
 }

@@ -9,14 +9,14 @@
         <std-dropdown-edit label="Country" field="field.children.country"></std-dropdown-edit>
     </div>
     <div style="margin-top:5px;width:100%;">
-        <div style="float:left;width: calc(100% - 255px);">
-            <std-textbox-edit label="State/Province" field="field.children.stateProvince" ng-show="showStateProvinceText"></std-textbox-edit>
-            <std-dropdown-edit label="State/Province" field="field.children.stateProvince" ng-show="!showStateProvinceText"></std-dropdown-edit>
-        </div>
-        <div style="float:left;width:115px">
+        <div style="float:left;width: calc(100% - 370px);">
             <std-textbox-edit label="City" field="field.children.city"></std-textbox-edit>
         </div>
-        <div style="float:left;width:140px">
+        <div style="float:left;width:175px">
+            <std-textbox-edit label="State/Province" field="field.children.stateProvince" ng-show="showStateProvinceText"></std-textbox-edit>
+            <std-intl-state-edit label="State/Province" field="field.children" ng-show="!showStateProvinceText"></std-intl-state-edit>
+        </div>
+        <div style="float:left;width:195px">
             <std-textbox-edit label="Postal Code" field="field.children.postalCode"></std-textbox-edit>
         </div>
     </div>

@@ -30,6 +30,7 @@ var app = angular.module('tru.type.lib',
         'std.usa.zip.9.edit',
         'std.record.picker.edit',
         'std.intl.phone.edit',
+        'std.intl.state.edit',
         'std.country.code.edit',
 
         //Search Controls
@@ -53,6 +54,7 @@ var app = angular.module('tru.type.lib',
         'std.usa.dollar.query',
         'std.boolean.dropdown.query',
         'std.record.picker.query',
+        'std.null.not.null.query',
 
         //List Controls
         'std.checkbox.list',
@@ -61,7 +63,6 @@ var app = angular.module('tru.type.lib',
         //Formatters
         'std.formatters',
 
-        'std.modals',
         'std.trap.focus',
         'std.grid.focus',
         'std.search.focus',
@@ -552,6 +553,21 @@ var app = angular.module('tru.type.lib',
                     $scope.field.value.$ = $scope.data.value;
             };
 
+            var goToFnExists = typeof $scope.field.goTo === 'function';
+            var hasRoleFnExists = typeof $scope.field.hasRole === 'function';
+            var hasRole = !hasRoleFnExists || $scope.field.hasRole();
+
+            $scope.goTo = function() {
+                if (goToFnExists && hasRoleFnExists && hasRole) {
+                    $scope.field.goTo();
+                }
+            };
+
+            $scope.showGoTo = false;
+            var isNotGrid = typeof $scope.field.context.isGrid === 'undefined';
+            if (goToFnExists && isNotGrid && hasRole)
+                $scope.showGoTo = true;
+
             $scope.$watch('field.value.$', function () { self.updateValue() });
 
             $scope.$on("$destroy", function () {
@@ -560,8 +576,8 @@ var app = angular.module('tru.type.lib',
         }]);
 
     module.directive('stdDropdownEdit',
-        ['$templateCache', 'stdDisplay', '$timeout',
-            function ($templateCache, display, $timeout) {
+        ['$templateCache', 'stdDisplay', '$timeout', 'stdUtil',
+            function ($templateCache, display, $timeout, util) {
                 return {
                     restrict: 'E',
                     scope: {
@@ -573,6 +589,7 @@ var app = angular.module('tru.type.lib',
                     link: function (scope, element) {
                         var oldValue;
                         var select = element[0].querySelectorAll('select')[0];
+                        var button = element[0].querySelectorAll('button')[0];
 
                         angular.element(select).bind('focus', function (e) {
                             oldValue = scope.field.value.$;
@@ -595,6 +612,26 @@ var app = angular.module('tru.type.lib',
                             if (e.keyCode === 46) {
                                 scope.data.value === -1
                                 scope.field.value.$ = null;
+                            }
+                            if (e.ctrlKey && e.keyCode === 71) {
+                                e.preventDefault();
+                                scope.goTo();
+                                $timeout(function() {
+                                    select.focus();
+                                });
+                            }
+                        });
+
+                        angular.element(button).bind('keydown', function (e) {
+                            if(e.keyCode === 13){
+                                e.preventDefault();
+                            }
+                            if (e.ctrlKey && e.keyCode === 71) {
+                                e.preventDefault();
+                                scope.goTo();
+                                $timeout(function() {
+                                    select.focus();
+                                });
                             }
                         });
 
@@ -948,22 +985,22 @@ var app = angular.module('tru.type.lib',
                         //    scope.field.children.zip.property.watermark = scope.field.property.zipWatermark;
                         //},
                         post: function(scope, element) {
-                            var stateProvinceLabel = angular.element(element[0].querySelectorAll('label')[4]);
-                            var postalCodeLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            var stateProvinceTextLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            var stateProvinceLabel = angular.element(element[0].querySelectorAll('label')[6]);
+                            var postalCodeLabel = angular.element(element[0].querySelectorAll('label')[7]);
+                            stateProvinceTextLabel.addClass('ttl-no-label-width');
                             stateProvinceLabel.addClass('ttl-no-label-width');
                             postalCodeLabel.addClass('ttl-no-label-width');
                             display.setVisibility(element, scope.field.type.canDisplay);
 
                             scope.showStateProvinceText = true;
 
-                            scope.$watch('scope.field.children.country', function(newValue, oldValue) {
+                            scope.$watch('field.children.country.value.$', function(newValue, oldValue) {
                                 if (newValue === oldValue) return;
-                                if (newValue === 'USA' || newValue === 'CAD')
+                                if (newValue === 236 || newValue === 39)
                                     scope.showStateProvinceText = false;
                                 else
                                     scope.showStateProvinceText = true;
-
-                                scope.field.children.stateProvince = undefined;
                             })
                         }
                     }
@@ -1056,9 +1093,138 @@ var app = angular.module('tru.type.lib',
 (function(){
     'use strict';
 
-    var module = angular.module('std.intl.state.province.edit', []);
+    var module = angular.module('std.intl.state.edit', []);
 
-    module.directive('stdIntlStateProvinceEdit',
+    module.controller('stdIntlStateEditController', ['$scope', '$element', '$timeout',
+        function ($scope, $element, $timeout) {
+            var self = this;
+            self.unregOnChoicesChange = undefined;
+            self.select = $element[0].querySelectorAll('select')[0];
+
+            $scope.data = {};
+
+            self.updateData = function() {
+                if ($scope.choices.length > 0) {
+
+                    if ($scope.field.stateProvince.type.isNullable) {
+                        var emptyItemExists = _.find($scope.choices, function (choice) { return choice.label === ' ' });
+                        if (!emptyItemExists)
+                            $scope.choices.unshift({ label: ' ', value: { $: -1 } });
+                    }
+
+                    if ($scope.field.stateProvince.value.$)
+                        $scope.data.value = $scope.field.value.$;
+
+                    if ($scope.field.stateProvince.type.isNullable && !$scope.field.stateProvince.value.$)
+                        $scope.data.value = $scope.choices[0].value.$;
+                }
+
+                $scope.data.show = true;
+
+                if ($scope.field.stateProvince.context.isGrid) {
+                    $timeout(function () {
+                        var select = $element[0].querySelectorAll('select')[0];
+                        select.focus();
+                    });
+                }
+
+                $scope.filteredChoices = _.filter($scope.choices, function (choice) {
+                    choice.stdIntlCountryRef === $scope.field.country.value.$;
+                });
+            };
+
+            self.checkForInactiveValues = function(choices) {
+                var itemFound = _.find(choices, function (obj) { return obj.value.$ === $scope.field.stateProvince.value.$ });
+
+                if (!itemFound && $scope.field.stateProvince.value.$) {
+                    if ($scope.field.stateProvince.queryByRef) {
+                        $scope.field.stateProvince.queryByRef($scope.field.StateProvince.value.$).then(function (result) {
+                            if (result) {
+                                choices.push({
+                                    label: result.label,
+                                    value: {$: $scope.field.stateProvince.value.$},
+                                    notAnOption: true
+                                });
+                            }
+
+                            $scope.choices = choices;
+                            self.updateData();
+                            self.updateOptions();
+                        });
+                    } else {
+                        $scope.choices = choices;
+                        self.updateData();
+                        self.updateOptions();
+                    }
+                } else {
+                    $scope.choices = choices;
+                    self.updateData();
+                    self.updateOptions();
+                }
+            };
+
+            self.loadChoices = function(choices) {
+                if (choices == null) {
+                    $scope.data.show = false;
+                } else {
+                    choices = choices.slice();
+                    self.checkForInactiveValues(choices);
+                }
+            };
+
+            self.updateValue = function () {
+                $scope.data.value = undefined;
+                if ($scope.choices && $scope.choices.length) {
+                    $scope.choices = _.reject($scope.choices, function (choice) { return choice.notAnOption === true; });
+                    self.checkForInactiveValues($scope.choices);
+                }
+            };
+
+            self.updateOptions = function () {
+                $timeout(function() {
+                    var select = $element[0].querySelectorAll('select')[0];
+                    angular.element(select).removeClass('not-an-option');
+                    angular.forEach($scope.choices, function (choice, index) {
+                        var option = select.querySelectorAll('option:not([value="?"])')[index];
+                        angular.element(option).removeClass('not-an-option');
+                        if (choice.notAnOption) {
+                            angular.element(option).addClass('not-an-option');
+                            angular.element(select).addClass('not-an-option');
+                        } else {
+                            angular.element(option).addClass('an-option');
+                        }
+                    });
+                });
+
+            };
+
+            self.unregOnChoicesChange = $scope.field.stateProvince.onChoicesChanged(self.loadChoices);
+
+            $scope.onChange = function () {
+
+                $scope.choices = _.reject($scope.choices, function (choice) { return choice.notAnOption === true; });
+
+                if ($scope.data.value === -1)
+                    $scope.field.stateProvince.value.$ = null;
+                else
+                    $scope.field.stateProvince.value.$ = $scope.data.value;
+            };
+
+            $scope.$watch('field.country.value.$', function(newValue, oldValue) {
+                if (newValue === oldValue) return;
+                if (newValue === 236 || newValue === 39) {
+                    self.updateData();
+                }
+            });
+
+            $scope.$watch('field.stateProvince.value.$', function () { self.updateValue() });
+
+            $scope.$on("$destroy", function () {
+                self.unregOnChoicesChange();
+            });
+        }]);
+
+    module.directive('stdIntlStateEdit',
         ['$templateCache', 'stdDisplay',
             function($templateCache, display) {
                 return {
@@ -1067,10 +1233,44 @@ var app = angular.module('tru.type.lib',
                         field: '=',
                         label: '@'
                     },
-                    template: $templateCache.get('src/templates/edit/std-intl-address-edit.html'),
+                    template: $templateCache.get('src/templates/edit/std-intl-state-edit.html'),
+                    controller: 'stdIntlStateEditController',
                     link: function(scope, element, attrs) {
+                        var oldValue;
+                        var select = element[0].querySelectorAll('select')[0];
+                        var button = element[0].querySelectorAll('button')[0];
 
-                        display.setVisibility(element, scope.field.type.canDisplay);
+                        angular.element(select).bind('focus', function (e) {
+                            oldValue = scope.field.stateProvince.value.$;
+
+                            //CHROME/SAFARI ONLY: Opens dropdown on focus
+                            if (scope.field.stateProvince.context.isGrid) {
+                                $timeout(function() {
+                                    var event = document.createEvent('MouseEvents');
+                                    event.initMouseEvent('mousedown', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
+                                    select.dispatchEvent(event);
+                                });
+                            }
+                        });
+
+                        angular.element(select).bind('keydown', function (e) {
+                            if (e.keyCode === 27) {
+                                scope.field.stateProvince.value.$ = oldValue;
+                                select.blur();
+                            }
+                            if (e.keyCode === 46) {
+                                scope.data.value === -1
+                                scope.field.stateProvince.value.$ = null;
+                            }
+                        });
+
+                        angular.element(button).bind('keydown', function (e) {
+                            if(e.keyCode === 13){
+                                e.preventDefault();
+                            }
+                        });
+
+                        display.setVisibility(element, scope.field.stateProvince.type.canDisplay);
                     }
                 };
             }
@@ -1314,7 +1514,16 @@ var app = angular.module('tru.type.lib',
             function ($scope, $element, $timeout, modal) {
                 var self = this;
 
+                self.cleanUp = function () {
+                    $scope.open = false;
+                    $scope.subview = null;
+                    $timeout(function () {
+                        $element[0].querySelectorAll('button')[0].focus();
+                    });
+                };
+
                 self.openModal = function () {
+                    $scope.subview = 'password';
                     var promise = modal.open(
                         'password',
                         {
@@ -1324,18 +1533,12 @@ var app = angular.module('tru.type.lib',
                     promise.then(
                         function handleResolve(response) {
                             $scope.field.value.$ = response;
-                            self.focusedElement();
+                            self.cleanUp();
                         },
                         function handleReject(error) {
-                            self.focusedElement();
+                            self.cleanUp();
                         }
                     );
-                };
-
-                self.focusedElement = function () {
-                    $timeout(function () {
-                        $element[0].querySelectorAll('button')[0].focus();
-                    });
                 };
 
                 self.init = function () {
@@ -1491,6 +1694,7 @@ var app = angular.module('tru.type.lib',
 
                 self.cleanUp = function () {
                     $scope.open = false;
+                    $scope.subview = null;
                     $timeout(function () {
                         $element[0].querySelectorAll('button')[0].focus();
                     });
@@ -1500,9 +1704,8 @@ var app = angular.module('tru.type.lib',
                 self.showRecordPickerModal = function () {
                     $scope.open = true;
                     $timeout(function () {
-                        var promise = modal.open(
-                            'recordPicker'
-                        );
+                        $scope.subview = 'recordPicker';
+                        var promise = modal.open();
                         promise.then(
                             function handleResolve(response) {
                                 $scope.field.value.$ = response;
@@ -1536,6 +1739,10 @@ var app = angular.module('tru.type.lib',
                 $scope.onKeydown = function (e) {
                     if (!$scope.open && e.keyCode === 13)
                         self.showRecordPickerModal();
+                    if (e.ctrlKey && e.keyCode === 71) {
+                        e.preventDefault();
+                        $scope.goTo();
+                    }
                 };
 
                 $scope.showArrow = false;
@@ -1546,6 +1753,21 @@ var app = angular.module('tru.type.lib',
                         $scope.showArrow = false;
                     }, 5000);
                 };
+
+                var goToFnExists = typeof $scope.field.goTo === 'function';
+                var hasRoleFnExists = typeof $scope.field.hasRole === 'function';
+                var hasRole = !hasRoleFnExists || $scope.field.hasRole();
+
+                $scope.goTo = function() {
+                    if (goToFnExists && hasRoleFnExists && hasRole) {
+                        $scope.field.goTo();
+                    }
+                };
+
+                $scope.showLink = false;
+                var isNotGrid = typeof $scope.field.context.isGrid === 'undefined';
+                if (goToFnExists && isNotGrid && hasRole)
+                    $scope.showLink = true;
 
                 $scope.$watch('field.value.$', function () { self.init(); });
             }]);
@@ -1562,6 +1784,32 @@ var app = angular.module('tru.type.lib',
                     controller: 'stdRecordPickerEditController',
                     template: $templateCache.get('src/templates/edit/std-record-picker-edit.html'),
                     link: function (scope, element) {
+                        $timeout(function() {
+                            var link = element[0].querySelectorAll('a')[0];
+                            var linkContainer = element[0].querySelectorAll('.ttl-record-picker-display-value')[0];
+                            angular.element(link).bind('keydown', function (e) {
+                                if (e.ctrlKey && e.keyCode === 71) {
+                                    e.preventDefault();
+                                        scope.goTo();
+                                    $timeout(function() {
+                                        select.focus();
+                                    });
+                                }
+                            });
+
+                            angular.element(linkContainer).bind('keydown', function (e) {
+                                if (e.ctrlKey && e.keyCode === 71) {
+                                    e.preventDefault();
+                                    scope.goTo();
+                                    $timeout(function() {
+                                        select.focus();
+                                    });
+                                }
+                            });
+                            angular.element(link).bind('mousedown', function (e) {
+                               link.focus();
+                            });
+                        });
                         display.setVisibility(element, scope.field.type.canDisplay);
                     }
                 };
@@ -2444,6 +2692,42 @@ var app = angular.module('tru.type.lib',
                 }
             }();
 
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+
+                if (value && util.isDate(value)) {
+                    var predicates = [];
+                    var startValue = new Date(value);
+                    var endValue = new Date(value);
+                    if (operator === 'eq') {
+                        startValue.setHours(0,0,0,0);
+                        endValue.setHours(23,59,59,999);
+                        predicates.push(queryPredicate.create('', 'gt', startValue));
+                        predicates.push(queryPredicate.create('', 'lt', endValue));
+                        queryPredicate.set(predicates[0].and(predicates[1]));
+                    }
+                    if (operator === 'lt') {
+                        startValue.setHours(0,0,0,0);
+                        queryPredicate.set('', 'lt', startValue);
+                    }
+                    if (operator === 'gt') {
+                        startValue.setHours(23,59,59,999);
+                        queryPredicate.set('', 'gt', startValue);
+                    }
+                    if (operator === 'le') {
+                        startValue.setHours(23,59,59,999);
+                        queryPredicate.set('', 'le', startValue);
+                    }
+                    if (operator === 'ge') {
+                        startValue.setHours(0,0,0,0);
+                        queryPredicate.set('', 'ge', startValue);
+                    }
+                } else {
+                    queryPredicate.clear();
+                }
+            };
+
             $scope.operatorImage = operatorLookup[$scope.field.property.operator].operatorImage;
             $scope.operatorImageMessage = operatorLookup[$scope.field.property.operator].operatorImageMessage;
 
@@ -2736,6 +3020,8 @@ var app = angular.module('tru.type.lib',
                 var value = $scope.field.value.$;
                 var queryPredicate = $scope.field.queryPredicate;
                 if (typeof value !== 'undefined') {
+                    if (typeof value === 'string')
+                        value = "'" + value + "'";
                     queryPredicate.set('', operator, value);
                 } else {
                     queryPredicate.clear();
@@ -3248,8 +3534,10 @@ var app = angular.module('tru.type.lib',
                             scope.field.children.postalCode.property.operator = 'contains';
                         },
                         post: function (scope, element, attrs, searchGroupCtrl) {
-                            var stateProvinceLabel = angular.element(element[0].querySelectorAll('label')[4]);
-                            var postalCodeLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            //var stateProvinceTextLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            var stateProvinceLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            var postalCodeLabel = angular.element(element[0].querySelectorAll('label')[6]);
+                            //stateProvinceTextLabel.addClass('ttl-no-label-width');
                             stateProvinceLabel.addClass('ttl-no-label-width');
                             postalCodeLabel.addClass('ttl-no-label-width');
 
@@ -3268,7 +3556,7 @@ var app = angular.module('tru.type.lib',
 
                                     var country = scope.field.children.country.value.$;
                                     if (typeof country !== 'undefined')
-                                        predicates.push(queryPredicate.create('Country', 'contains', country));
+                                        predicates.push(queryPredicate.create('CountryStdIntlCountryRef', 'eq', country));
 
                                     var city = scope.field.children.city.value.$;
                                     if (typeof city !== 'undefined')
@@ -3276,7 +3564,7 @@ var app = angular.module('tru.type.lib',
 
                                     var stateProvince = scope.field.children.stateProvince.value.$;
                                     if (typeof stateProvince !== 'undefined')
-                                        predicates.push(queryPredicate.create('StateProvince', 'contains', stateProvince));
+                                        predicates.push(queryPredicate.create('StateProvinceStdIntlStateRef', 'eq', stateProvince));
 
                                     var postalCode = scope.field.children.postalCode.value.$;
                                     if (typeof postalCode !== 'undefined')
@@ -3304,6 +3592,137 @@ var app = angular.module('tru.type.lib',
             }
         ]);
 })();
+(function(){
+    'use strict';
+
+    var module = angular.module('std.null.not.null.query', []);
+
+    module.controller('stdNullNotNullController', ['$scope', 'stdOperatorLookup', 'stdUtil',
+        function ($scope, operatorLookup, util) {
+            var ctrlValue = $scope.field.property.value;
+            var ctrlDefault = $scope.field.property.default;
+            var ctrlValueHasValue = typeof ctrlValue !== 'undefined';
+            var ctrlDefaultHasValue = typeof ctrlDefault !== 'undefined';
+            var operator = operatorLookup[$scope.field.property.operator].operator;
+
+            var onClearCB = function(){
+                return function() {
+                    if (ctrlValueHasValue) return;
+                    $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
+                }
+            }();
+
+            var onDefaultCB = function(){
+                return function() {
+                    if (ctrlValueHasValue) return;
+                    if (ctrlDefaultHasValue)
+                        $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
+                    else
+                        $scope.field.value.$ = undefined;
+                    $scope.updateQueryPredicate();
+                }
+            }();
+
+            $scope.updateQueryPredicate = function() {
+                var value = $scope.field.value.$;
+                var queryPredicate = $scope.field.queryPredicate;
+                if (typeof value !== 'undefined') {
+                    if (value) {
+                        operator = 'ne';
+                    } else {
+                        operator = 'eq';
+                    }
+                    queryPredicate.set('', operator, null);
+                } else {
+                    queryPredicate.clear();
+                }
+            };
+
+            $scope.data = {
+                choices: [],
+                label: undefined
+            };
+
+            var loadChoices = function() {
+                $scope.data.choices.push({label: 'Is Set', value: {$: 1}});
+                $scope.data.choices.push({label: 'Is Not Set', value: {$: 0}});
+                $scope.data.choices.unshift({label: '', value: {$: undefined}});
+
+                if (ctrlValueHasValue) {
+                    $scope.data.label = $scope.data.choices.filter(function (obj) {
+                        return obj.value.$ === ctrlValue;
+                    })[0].label;
+                    $scope.field.value.$ = util.tryParseInt(ctrlValue, ctrlValue);
+                } else if (ctrlDefaultHasValue)
+                    $scope.field.value.$ = util.tryParseInt(ctrlDefault, ctrlDefault);
+                else
+                    $scope.field.value.$ = undefined;
+
+                $scope.updateQueryPredicate();
+            };
+
+            $scope.valueIsUndefined = function () {
+                return (typeof ctrlValue === 'undefined');
+            };
+
+            $scope.controlValueIsUndefined = function () {
+                return (typeof $scope.field === 'undefined') || (typeof $scope.field.value.$ === 'undefined') || $scope.field.value.$ === '';
+            };
+
+            $scope.onOperatorClick = function() {
+                if (ctrlValueHasValue || $scope.field.context.isEditing) return;
+                $scope.field.value.$ = undefined;
+                $scope.updateQueryPredicate();
+            };
+
+            $scope.operatorImage = operatorLookup['equal'].operatorImage;
+            $scope.operatorImageMessage = operatorLookup['equal'].operatorImageMessage;
+
+            if(ctrlValue === null) {
+                $scope.data.label = 'Null';
+                $scope.field.value.$ = null;
+                $scope.updateQueryPredicate();
+            }
+
+            $scope.init = function() {
+                $scope.searchGroupCtrl.registerClear(onClearCB);
+                $scope.searchGroupCtrl.registerDefault(onDefaultCB);
+                loadChoices();
+            };
+        }]);
+
+    module.directive('stdNullNotNullQuery',
+        ['$templateCache', '$timeout',
+            function ($templateCache, $timeout) {
+                return {
+                    restrict: 'E',
+                    scope: {
+                        field: '=',
+                        label: '@'
+                    },
+                    require: '^truSearchGroup',
+                    template: $templateCache.get('src/templates/query/std-null-not-null-query.html'),
+                    controller: 'stdNullNotNullController',
+                    link: function (scope, element, attrs, searchGroupCtrl) {
+                        $timeout(function() {
+                            var select = element[0].querySelectorAll('select')[0];
+
+                            angular.element(select).bind('keydown', function (e) {
+                                if (e.keyCode === 46) {
+                                    scope.field.value.$ = undefined;
+                                }
+                                scope.updateQueryPredicate();
+                            });
+                        });
+
+                        scope.searchGroupCtrl = searchGroupCtrl;
+                        scope.init();
+                    }
+                };
+            }
+        ]);
+})();
 (function () {
     'use strict';
 
@@ -3313,8 +3732,10 @@ var app = angular.module('tru.type.lib',
         function ($scope, operatorLookup, util) {
             var ctrlValue = $scope.field.property.value ? $scope.field.property.value : [];
             var ctrlDefault = $scope.field.property.default ? $scope.field.property.default : [];
+            var ctrlLabelDefault = $scope.field.property.labelDefault ? $scope.field.property.labelDefault : [];
             var ctrlValueHasValue = ctrlValue.length > 0;
             var ctrlDefaultHasValue = ctrlDefault.length > 0;
+            var ctrlLabelDefaultHasValue = ctrlLabelDefault.length > 0;
             var operator = operatorLookup[$scope.field.property.operator].operator;
             var unregOnChoicesChange = undefined;
 
@@ -3369,6 +3790,8 @@ var app = angular.module('tru.type.lib',
                         }
                     } else if (ctrlDefaultHasValue) {
                         choice["checked"] = ctrlDefault.indexOf(choice.value.$.toString()) !== -1;
+                    }  else if (ctrlLabelDefaultHasValue) {
+                        choice["checked"] = ctrlLabelDefault.indexOf(choice.label) !== -1;
                     } else {
                         choice["checked"] = false;
                     }
@@ -3437,11 +3860,20 @@ var app = angular.module('tru.type.lib',
                         field: '=',
                         label: '@'
                     },
-                    require: '^truSearchGroup',
+                    require: ['^truSearchGroup', '^truLabelContainer'],
                     template: $templateCache.get('src/templates/query/std-or-list-checkbox-query.html'),
                     controller: 'stdOrListCheckboxQueryController',
-                    link: function (scope, element, attrs, searchGroupCtrl) {
-                        scope.searchGroupCtrl = searchGroupCtrl;
+                    link: function (scope, element, attrs, ctrls) {
+                        scope.searchGroupCtrl = ctrls[0];
+                        scope.labelContainerCtrl = ctrls[1];
+
+                        var labels = element[0].querySelectorAll('label');
+
+                        if (ctrls[1]) {
+                            for (var i = 0; i < labels.length; i++) {
+                                ctrls[1].addLabel(labels[i]);
+                            }
+                        }
                         scope.init();
                     }
                 };
@@ -7952,6 +8384,7 @@ var app = angular.module('tru.type.lib',
                         var wholePlaces = 38 - decimalPlaces;
 
                         ngModelCtrl.$formatters.push(function (val) {
+                            if (val === null) return val;
                             return '$' + val.toFixed(2);
                         });
 
@@ -9670,8 +10103,6 @@ var app = angular.module('tru.type.lib',
                         previousDeferred.reject();
                     }
 
-                    $rootScope.$emit('modal.open', type);
-
                     return(modal.deferred.promise);
                 }
 
@@ -9838,7 +10269,7 @@ var app = angular.module('tru.type.lib',
                     var firstChar = selector.charAt(0);
                     for (; element && element !== document; element = element.parentNode) {
                         if (firstChar === '.') {
-                            if (element.classList.contains(selector.substr(1))) {
+                            if (element.classList && element.classList.contains(selector.substr(1))) {
                                 return element;
                             }
                         }
@@ -9960,7 +10391,7 @@ var app = angular.module('tru.type.lib',
             function (stdFilter) {
                 return function (cfg) {
                     var v = cfg.value.$;
-                    if (v === null)
+                    if (v === null || typeof v === 'undefined')
                         return null;
                     var utc = new Date(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate());
                     return stdFilter.formatDate(utc, 'MM/dd/yyyy');
@@ -10304,45 +10735,68 @@ var app = angular.module('tru.type.lib',
 
     var module = angular.module('std.formatters');
 
-    module.filter('stdUsaAddress', ['dataService', function (dataService) {
-        var dataContext = dataService.createContext();
-        var queryRunning;
-        return function (cfg) {
-            cfg = cfg.children;
-            var text = '';
-            if (cfg.address1.value.$ !== null)
-                text += cfg.address1.value.$ + ' ';
-            if (cfg.address2.value.$ !== null)
-                text += cfg.address2.value.$ + ' ';
-            if (cfg.city.value.$ !== null)
-                text += cfg.city.value.$ + ' ';
-            if (cfg.state.value.$ !== null) {
-                var state = dataContext.entityAccess('StdUSAState').findInCache(cfg.state.value.$);
-                if (state)
-                    text += state.Code + ', ';
-                else {
-                    text += '(' + cfg.state.value.$ + '), ';
-                    if (!queryRunning) {
+    module.filter('stdUsaAddress', [
+        'dataService', '$q', function(dataService, $q) {
+            var dataContext = dataService.createContext();
+            var queryRunning = false;
+            var deferreds = [];
+            function filter(cfg) {
+                var deferred = $q.defer();
+                var data = {
+                    deferred: deferred,
+                    cfg: cfg.children
+
+                };
+                deferreds.push(data);
+                cfg = cfg.children;
+
+                var text = "Loading...";
+
+                function buildText() {
+                    text = '';
+                    if (cfg.address1.value.$ !== null)
+                        text += cfg.address1.value.$ + ' ';
+                    if (cfg.address2.value.$ !== null)
+                        text += cfg.address2.value.$ + ' ';
+                    if (cfg.city.value.$ !== null)
+                        text += cfg.city.value.$ + ' ';
+                    if (cfg.state.value.$ !== null) {
+                        var state = dataContext.entityAccess('StdUSAState').findInCache(cfg.state.value.$);
+                        if (state)
+                            text += state.Code + ', ';
+                    }
+                    if (cfg.zip.value.$ !== null) {
+                        if (cfg.zip.value.$.length > 5)
+                            text += cfg.zip.value.$.substring(0, 5) + '-' + cfg.zip.value.$.substring(5);
+                        else
+                            text += cfg.zip.value.$;
+                    }
+                    return text;
+                }
+
+                if (dataContext.entityAccess('StdUSAState').findInCache(cfg.state.value.$)) {
+                    return buildText();
+                } else {
+                    if (queryRunning === false) {
                         queryRunning = true;
                         dataContext.entityAccess('StdUSAState').search()
-                            .then(function() {
-                                //nothing to do
+                            .then(function(entity) {
+                                for (var i = 0; i < deferreds.length; i++) {
+                                    cfg = deferreds[i].cfg;
+                                    deferreds[i].deferred.resolve(buildText());
+                                }
                             })
                             .finally(function() {
                                 queryRunning = false;
                             });
                     }
                 }
-            }
-            if (cfg.zip.value.$ !== null) {
-                if (cfg.zip.value.$.length > 5)
-                    text += cfg.zip.value.$.substring(0, 5) + '-' + cfg.zip.value.$.substring(5);
-                else
-                    text += cfg.zip.value.$;
-            }
-            return text;
-        };
-    }])
+
+                return deferred.promise;
+            };
+            return filter;
+        }
+    ]);
 })();
 (function () {
     'use strict';
@@ -10597,23 +11051,49 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
   $templateCache.put('src/templates/edit/std-dropdown-edit.html',
     "<tru-label label=\"{{label}}\" field=\"field\">\r" +
     "\n" +
-    "    <div data-ng-show=\"!data.show\" style=\"position:relative;background-color:#fff;height:20px;width:100%;z-index:100;\"><p>Loading...</p></div>\r" +
+    "    <div class=\"ttl-dropdown-edit-wrapper\">\r" +
     "\n" +
-    "    <select data-ng-model=\"data.value\"\r" +
+    "        <div data-ng-show=\"!data.show\" style=\"position:relative;background-color:#fff;height:20px;width:100%;z-index:100;\"><p>Loading...</p></div>\r" +
     "\n" +
-    "            data-ng-options=\"x.value.$ as x.label for x in choices\"\r" +
+    "        <select data-ng-model=\"data.value\"\r" +
     "\n" +
-    "            data-ng-change=\"onChange()\"\r" +
+    "                data-ng-options=\"x.value.$ as x.label for x in choices\"\r" +
     "\n" +
-    "            data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
+    "                data-ng-change=\"onChange()\"\r" +
     "\n" +
-    "            data-ng-show=\"data.show\"\r" +
+    "                data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
     "\n" +
-    "            data-z-validate\r" +
+    "                data-ng-show=\"data.show\"\r" +
     "\n" +
-    "            class=\"ttl-dropdown-edit dropdown control\">\r" +
+    "                data-z-validate\r" +
     "\n" +
-    "    </select>\r" +
+    "                class=\" dropdown control\"\r" +
+    "\n" +
+    "                data-ng-class=\"showGoTo ? 'ttl-dropdown-edit' : 'ttl-dropdown-edit-no-button'\">\r" +
+    "\n" +
+    "        </select>\r" +
+    "\n" +
+    "        <button data-ng-click=\"goTo()\"\r" +
+    "\n" +
+    "                data-ng-show=\"showGoTo\"\r" +
+    "\n" +
+    "                data-ng-cloak\r" +
+    "\n" +
+    "                data-ng-style=\"showGoTo ? {'display': 'block'} : {'display': 'none'}\"\r" +
+    "\n" +
+    "                class=\"tvl-btn\"\r" +
+    "\n" +
+    "                style=\"float:left;height:20px;width:25px;padding:0;position:relative;display:none;\"\r" +
+    "\n" +
+    "                type=\"button\"\r" +
+    "\n" +
+    "                >\r" +
+    "\n" +
+    "            <i style=\"\" class=\"icon-external-link\"></i>\r" +
+    "\n" +
+    "        </button>\r" +
+    "\n" +
+    "    </div>\r" +
     "\n" +
     "</tru-label>"
   );
@@ -10775,21 +11255,21 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <div style=\"margin-top:5px;width:100%;\">\r" +
     "\n" +
-    "        <div style=\"float:left;width: calc(100% - 255px);\">\r" +
-    "\n" +
-    "            <std-textbox-edit label=\"State/Province\" field=\"field.children.stateProvince\" ng-show=\"showStateProvinceText\"></std-textbox-edit>\r" +
-    "\n" +
-    "            <std-dropdown-edit label=\"State/Province\" field=\"field.children.stateProvince\" ng-show=\"!showStateProvinceText\"></std-dropdown-edit>\r" +
-    "\n" +
-    "        </div>\r" +
-    "\n" +
-    "        <div style=\"float:left;width:115px\">\r" +
+    "        <div style=\"float:left;width: calc(100% - 370px);\">\r" +
     "\n" +
     "            <std-textbox-edit label=\"City\" field=\"field.children.city\"></std-textbox-edit>\r" +
     "\n" +
     "        </div>\r" +
     "\n" +
-    "        <div style=\"float:left;width:140px\">\r" +
+    "        <div style=\"float:left;width:175px\">\r" +
+    "\n" +
+    "            <std-textbox-edit label=\"State/Province\" field=\"field.children.stateProvince\" ng-show=\"showStateProvinceText\"></std-textbox-edit>\r" +
+    "\n" +
+    "            <std-intl-state-edit label=\"State/Province\" field=\"field.children\" ng-show=\"!showStateProvinceText\"></std-intl-state-edit>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:195px\">\r" +
     "\n" +
     "            <std-textbox-edit label=\"Postal Code\" field=\"field.children.postalCode\"></std-textbox-edit>\r" +
     "\n" +
@@ -10804,7 +11284,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
   $templateCache.put('src/templates/edit/std-intl-phone-edit.html',
     "<tru-label label=\"{{label}}\" field=\"field\">\r" +
     "\n" +
-    "    <div style=\"width:100%;\">\r" +
+    "    <div style=\"width:100%;min-width:300px\">\r" +
     "\n" +
     "        <div style=\"float:left;width:105px\">\r" +
     "\n" +
@@ -10909,6 +11389,35 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "           type=\"text\"\r" +
     "\n" +
     "            />\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
+  $templateCache.put('src/templates/edit/std-intl-state-edit.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <div class=\"ttl-dropdown-edit-wrapper\">\r" +
+    "\n" +
+    "        <div data-ng-show=\"!data.show\" style=\"position:relative;background-color:#fff;height:20px;width:100%;z-index:100;\"><p>Loading...</p></div>\r" +
+    "\n" +
+    "        <select data-ng-model=\"data.value\"\r" +
+    "\n" +
+    "                data-ng-options=\"x.value.$ as x.label for x in choices\"\r" +
+    "\n" +
+    "                data-ng-change=\"onChange()\"\r" +
+    "\n" +
+    "                data-ng-disabled=\"!field.stateProvince.context.isEditing || !field.stateProvince.type.canEdit\"\r" +
+    "\n" +
+    "                data-z-validate\r" +
+    "\n" +
+    "                class=\"ttl-dropdown-edit-no-button dropdown control\"\r" +
+    "\n" +
+    "                >\r" +
+    "\n" +
+    "        </select>\r" +
+    "\n" +
+    "    </div>\r" +
     "\n" +
     "</tru-label>"
   );
@@ -11239,7 +11748,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                <h4 style=\"margin-left: 5px;margin-top: 5px;float:left;\">\r" +
     "\n" +
-    "                    {{title}} Picker\r" +
+    "                    {{title}}\r" +
     "\n" +
     "                </h4>\r" +
     "\n" +
@@ -11327,11 +11836,13 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "        <div class=\"ttl-record-picker-wrapper\" data-ng-if=\"!field.context.isGrid\">\r" +
     "\n" +
-    "            <div data-ng-mousedown=\"onInputMousedown()\" style=\"float:left;width: calc(100% - 25px);background-color:#fff;\">\r" +
+    "            <div data-ng-mousedown=\"onInputMousedown()\" data-ng-class=\"showLink ? 'ttl-record-picker-display-value-wrapper' : 'ttl-record-picker-display-value-wrapper-no-button'\">\r" +
     "\n" +
-    "                <div class=\"ttl-record-picker-display-value\">\r" +
+    "                <div class=\"ttl-record-picker-display-value\" tabindex=\"-1\">\r" +
     "\n" +
-    "                    <a data-ng-click=\"field.goTo()\" href=\"#\">{{data.displayValue}}</a>\r" +
+    "                    <a data-ng-click=\"goTo()\" href=\"#\" data-ng-show=\"showLink\">{{data.displayValue}}</a>\r" +
+    "\n" +
+    "                    <p data-ng-show=\"!showLink\" style=\"line-height:6px;\">{{data.displayValue}}</p>\r" +
     "\n" +
     "                </div>\r" +
     "\n" +
@@ -11343,13 +11854,15 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "                    data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit || open\"\r" +
     "\n" +
+    "                    data-ng-show=\"showLink\"\r" +
+    "\n" +
     "                    class=\"tvl-btn\"\r" +
     "\n" +
     "                    style=\"float:left;height:20px;width:25px;padding:0;position:relative;\"\r" +
     "\n" +
-    "                    >...\r" +
+    "                    ><i class=\"icon-search icon-flip-horizontal\"></i>\r" +
     "\n" +
-    "                <i style=\"color:green;margin-left:5px;margin-top:3px;position:absolute;z-index:5;top:0;left:-20px;\" class=\"ttl-date-button-icon icon-arrow-right animated shake\" data-ng-show=\"showArrow\"></i>\r" +
+    "                <i style=\"color:green;margin-left:5px;margin-top:3px;position:absolute;z-index:5;top:0;left:-20px;\" class=\"ttl-date-button-icon icon-arrow-right animated shake\" data-ng-show=\"showArrow && showLink\"></i>\r" +
     "\n" +
     "            </button>\r" +
     "\n" +
@@ -11437,7 +11950,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    </div>\r" +
     "\n" +
-    "    <div style=\"margin-top:5px;width:100%;\">\r" +
+    "    <div style=\"margin-top:5px;width:100%;min-width:475px\">\r" +
     "\n" +
     "        <div style=\"float:left;width: calc(100% - 255px);\">\r" +
     "\n" +
@@ -11647,6 +12160,37 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "    </div>\r" +
     "\n" +
     "</div>"
+  );
+
+
+  $templateCache.put('src/templates/list/std-dropdown-list.html',
+    "<tru-label label=\"{{label}}\" field=\"field\">\r" +
+    "\n" +
+    "    <div class=\"ttl-dropdown-edit-wrapper\">\r" +
+    "\n" +
+    "        <div data-ng-show=\"!data.show\" style=\"position:relative;background-color:#fff;height:20px;width:100%;z-index:100;\"><p>Loading...</p></div>\r" +
+    "\n" +
+    "        <select data-ng-model=\"data.value\"\r" +
+    "\n" +
+    "                data-ng-options=\"x.value.$ as x.label for x in choices\"\r" +
+    "\n" +
+    "                data-ng-change=\"onChange()\"\r" +
+    "\n" +
+    "                data-ng-disabled=\"!field.context.isEditing || !field.type.canEdit\"\r" +
+    "\n" +
+    "                data-ng-show=\"data.show\"\r" +
+    "\n" +
+    "                data-z-validate\r" +
+    "\n" +
+    "                class=\" dropdown control\"\r" +
+    "\n" +
+    "                data-ng-class=\"showGoTo() ? 'ttl-dropdown-edit' : 'ttl-dropdown-edit-no-button'\">\r" +
+    "\n" +
+    "        </select>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "</tru-label>"
   );
 
 
@@ -12263,41 +12807,78 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <div>\r" +
     "\n" +
-    "        <std-textbox-edit label=\"Address 1\" field=\"field.children.address1\"></std-textbox-edit>\r" +
+    "        <std-textbox-query label=\"Address 1\" field=\"field.children.address1\"></std-textbox-query>\r" +
     "\n" +
     "    </div>\r" +
     "\n" +
     "    <div style=\"margin-top:5px\">\r" +
     "\n" +
-    "        <std-textbox-edit label=\"Address 2\" field=\"field.children.address2\"></std-textbox-edit>\r" +
+    "        <std-textbox-query label=\"Address 2\" field=\"field.children.address2\"></std-textbox-query>\r" +
     "\n" +
     "    </div>\r" +
     "\n" +
     "    <div style=\"margin-top:5px\">\r" +
     "\n" +
-    "        <std-textbox-edit label=\"Country\" field=\"field.children.country\"></std-textbox-edit>\r" +
+    "        <std-dropdown-query label=\"Country\" field=\"field.children.country\"></std-dropdown-query>\r" +
     "\n" +
     "    </div>\r" +
     "\n" +
     "    <div style=\"margin-top:5px;width:100%;\">\r" +
     "\n" +
-    "        <div style=\"float:left;width: calc(100% - 255px);\">\r" +
+    "        <div style=\"float:left;width: calc(100% - 370px);\">\r" +
     "\n" +
-    "            <std-textbox-edit label=\"State/Province\" field=\"field.children.stateProvince\"></std-textbox-edit>\r" +
-    "\n" +
-    "        </div>\r" +
-    "\n" +
-    "        <div style=\"float:left;width:115px\">\r" +
-    "\n" +
-    "            <std-textbox-edit label=\"City\" field=\"field.children.city\"></std-textbox-edit>\r" +
+    "            <std-textbox-query label=\"City\" field=\"field.children.city\"></std-textbox-query>\r" +
     "\n" +
     "        </div>\r" +
     "\n" +
-    "        <div style=\"float:left;width:140px\">\r" +
+    "        <div style=\"float:left;width:175px\">\r" +
     "\n" +
-    "            <std-textbox-edit label=\"Postal Code\" field=\"field.children.postalCode\"></std-textbox-edit>\r" +
+    "            <std-dropdown-query label=\"State/Province\" field=\"field.children.stateProvince\"></std-dropdown-query>\r" +
     "\n" +
     "        </div>\r" +
+    "\n" +
+    "        <div style=\"float:left;width:195px\">\r" +
+    "\n" +
+    "            <std-textbox-query label=\"Postal Code\" field=\"field.children.postalCode\"></std-textbox-query>\r" +
+    "\n" +
+    "        </div>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "</tru-label>"
+  );
+
+
+  $templateCache.put('src/templates/query/std-null-not-null-query.html',
+    "<tru-label label=\"{{label}}\">\r" +
+    "\n" +
+    "    <div data-ng-class=\"{'ttl-operator-icon-has-value': !controlValueIsUndefined() || !valueIsUndefined()}\" class=\"ttl-operator-icon-wrapper\" title=\"{{operatorImageMessage}}\">\r" +
+    "\n" +
+    "        <i tabindex=\"-1\" class=\"ttl-operator-icon\" data-ng-class=\"operatorImage\" data-ng-click=\"onOperatorClick()\"></i>\r" +
+    "\n" +
+    "    </div>\r" +
+    "\n" +
+    "    <div style=\"padding-left:18px;\">\r" +
+    "\n" +
+    "        <select data-ng-model=\"field.value.$\"\r" +
+    "\n" +
+    "                data-ng-change=\"updateQueryPredicate()\"\r" +
+    "\n" +
+    "                data-ng-disabled=\"field.context.isEditing\"\r" +
+    "\n" +
+    "                data-ng-options=\"x.value.$ as x.label for x in data.choices\"\r" +
+    "\n" +
+    "                data-ng-if=\"valueIsUndefined()\"\r" +
+    "\n" +
+    "                std-select-value-converter\r" +
+    "\n" +
+    "                class=\"ttl-dropdown-edit dropdown control\"\r" +
+    "\n" +
+    "                >\r" +
+    "\n" +
+    "        </select>\r" +
+    "\n" +
+    "        <p data-ng-if=\"!valueIsUndefined()\">{{data.label}}</p>\r" +
     "\n" +
     "    </div>\r" +
     "\n" +
@@ -12316,7 +12897,7 @@ angular.module('tru.type.lib').run(['$templateCache', function($templateCache) {
     "\n" +
     "    <div class=\"ttl-or-list-checkbox-query-wrapper\">\r" +
     "\n" +
-    "        <ul class=\"hList tickGroup\" data-ng-if=\"valueIsUndefined()\">\r" +
+    "        <ul class=\"hList tickGroup\" data-ng-if=\"valueIsUndefined()\" data-tru-label-container>\r" +
     "\n" +
     "            <li data-ng-repeat=\"choice in data.choices\">\r" +
     "\n" +

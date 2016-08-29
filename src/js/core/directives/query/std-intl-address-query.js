@@ -30,8 +30,10 @@
                             scope.field.children.postalCode.property.operator = 'contains';
                         },
                         post: function (scope, element, attrs, searchGroupCtrl) {
-                            var stateProvinceLabel = angular.element(element[0].querySelectorAll('label')[4]);
-                            var postalCodeLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            //var stateProvinceTextLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            var stateProvinceLabel = angular.element(element[0].querySelectorAll('label')[5]);
+                            var postalCodeLabel = angular.element(element[0].querySelectorAll('label')[6]);
+                            //stateProvinceTextLabel.addClass('ttl-no-label-width');
                             stateProvinceLabel.addClass('ttl-no-label-width');
                             postalCodeLabel.addClass('ttl-no-label-width');
 
@@ -50,7 +52,7 @@
 
                                     var country = scope.field.children.country.value.$;
                                     if (typeof country !== 'undefined')
-                                        predicates.push(queryPredicate.create('Country', 'contains', country));
+                                        predicates.push(queryPredicate.create('CountryStdIntlCountryRef', 'eq', country));
 
                                     var city = scope.field.children.city.value.$;
                                     if (typeof city !== 'undefined')
@@ -58,7 +60,7 @@
 
                                     var stateProvince = scope.field.children.stateProvince.value.$;
                                     if (typeof stateProvince !== 'undefined')
-                                        predicates.push(queryPredicate.create('StateProvince', 'contains', stateProvince));
+                                        predicates.push(queryPredicate.create('StateProvinceStdIntlStateRef', 'eq', stateProvince));
 
                                     var postalCode = scope.field.children.postalCode.value.$;
                                     if (typeof postalCode !== 'undefined')

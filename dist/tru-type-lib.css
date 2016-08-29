@@ -1284,9 +1284,23 @@ Datetime-Edit Styles
 std-dropdown-edit - styles
 ------------------------------------------------------------------------ */
 
+.ttl-dropdown-edit {
+    float: left;
+    width: calc(100% - 25px)
+}
+
+.ttl-dropdown-edit-no-button {
+    width: 100%;
+}
+
 .ttl-dropdown-edit option {
     font-family: Calibri, Helvetica, Arial, sans-serif;
     font-size: 14px;
+}
+
+.ttl-dropdown-edit-wrapper {
+    width: 100% !important;
+    display: inline-flex;
 }
 /* ---------------------------------------------------------------------
 File-Edit Styles
@@ -1351,6 +1365,15 @@ Record-Picker-Edit Styles
     display: inline-flex;
 }
 
+.ttl-record-picker-display-value-wrapper {
+    float: left;
+    width: calc(100% - 25px)
+}
+
+.ttl-record-picker-display-value-wrapper-no-button {
+    width: 100%;
+}
+
 .ttl-record-picker-display-value {
     width: 100%;
     -webkit-border-radius: 0;
@@ -1376,6 +1399,15 @@ Record-Picker-Edit Styles
     margin-bottom: 0px;
     color: #000000;
     vertical-align: middle;
+}
+
+.ttl-record-picker-display-value:focus {
+    border-color: rgba(82,168,236,.8);
+    outline: 0;
+    outline: thin dotted \9;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(82,168,236,.6);
+    -moz-box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(82,168,236,.6);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,.075),0 0 8px rgba(82,168,236,.6);
 }
 
 
@@ -1688,6 +1720,15 @@ button:focus .ttl-invalid-button  {
 .not-an-option {
     color: #cbcbcb;
     font-style: italic;
+}
+
+/*
+  Allow angular.js to be loaded in body, hiding cloaked elements until
+  templates compile.  The !important is important given that there may be
+  other selectors that are more specific or come later and might alter display.
+ */
+[ng\:cloak], [ng-cloak], .ng-cloak {
+    display: none !important;
 }
 /* ---------------------------------------------------------------------
 std-font - styles

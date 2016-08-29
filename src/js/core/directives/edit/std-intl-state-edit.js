@@ -1,9 +1,9 @@
-(function () {
+(function(){
     'use strict';
 
-    var module = angular.module('std.dropdown.edit', []);
+    var module = angular.module('std.intl.state.edit', []);
 
-    module.controller('stdDropdownEditController', ['$scope', '$element', '$timeout',
+    module.controller('stdIntlStateEditController', ['$scope', '$element', '$timeout',
         function ($scope, $element, $timeout) {
             var self = this;
             self.unregOnChoicesChange = undefined;
@@ -14,39 +14,43 @@
             self.updateData = function() {
                 if ($scope.choices.length > 0) {
 
-                    if ($scope.field.type.isNullable) {
+                    if ($scope.field.stateProvince.type.isNullable) {
                         var emptyItemExists = _.find($scope.choices, function (choice) { return choice.label === ' ' });
                         if (!emptyItemExists)
                             $scope.choices.unshift({ label: ' ', value: { $: -1 } });
                     }
 
-                    if ($scope.field.value.$)
+                    if ($scope.field.stateProvince.value.$)
                         $scope.data.value = $scope.field.value.$;
 
-                    if ($scope.field.type.isNullable && !$scope.field.value.$)
+                    if ($scope.field.stateProvince.type.isNullable && !$scope.field.stateProvince.value.$)
                         $scope.data.value = $scope.choices[0].value.$;
                 }
 
                 $scope.data.show = true;
 
-                if ($scope.field.context.isGrid) {
+                if ($scope.field.stateProvince.context.isGrid) {
                     $timeout(function () {
                         var select = $element[0].querySelectorAll('select')[0];
                         select.focus();
                     });
                 }
-            }
+
+                $scope.filteredChoices = _.filter($scope.choices, function (choice) {
+                    choice.stdIntlCountryRef === $scope.field.country.value.$;
+                });
+            };
 
             self.checkForInactiveValues = function(choices) {
-                var itemFound = _.find(choices, function (obj) { return obj.value.$ === $scope.field.value.$ });
+                var itemFound = _.find(choices, function (obj) { return obj.value.$ === $scope.field.stateProvince.value.$ });
 
-                if (!itemFound && $scope.field.value.$) {
-                    if ($scope.field.queryByRef) {
-                        $scope.field.queryByRef($scope.field.value.$).then(function (result) {
+                if (!itemFound && $scope.field.stateProvince.value.$) {
+                    if ($scope.field.stateProvince.queryByRef) {
+                        $scope.field.stateProvince.queryByRef($scope.field.StateProvince.value.$).then(function (result) {
                             if (result) {
                                 choices.push({
                                     label: result.label,
-                                    value: {$: $scope.field.value.$},
+                                    value: {$: $scope.field.stateProvince.value.$},
                                     notAnOption: true
                                 });
                             }
@@ -65,7 +69,7 @@
                     self.updateData();
                     self.updateOptions();
                 }
-            }
+            };
 
             self.loadChoices = function(choices) {
                 if (choices == null) {
@@ -102,61 +106,53 @@
 
             };
 
-            self.unregOnChoicesChange = $scope.field.onChoicesChanged(self.loadChoices);
+            self.unregOnChoicesChange = $scope.field.stateProvince.onChoicesChanged(self.loadChoices);
 
             $scope.onChange = function () {
 
                 $scope.choices = _.reject($scope.choices, function (choice) { return choice.notAnOption === true; });
 
                 if ($scope.data.value === -1)
-                    $scope.field.value.$ = null;
+                    $scope.field.stateProvince.value.$ = null;
                 else
-                    $scope.field.value.$ = $scope.data.value;
+                    $scope.field.stateProvince.value.$ = $scope.data.value;
             };
 
-            var goToFnExists = typeof $scope.field.goTo === 'function';
-            var hasRoleFnExists = typeof $scope.field.hasRole === 'function';
-            var hasRole = !hasRoleFnExists || $scope.field.hasRole();
-
-            $scope.goTo = function() {
-                if (goToFnExists && hasRoleFnExists && hasRole) {
-                    $scope.field.goTo();
+            $scope.$watch('field.country.value.$', function(newValue, oldValue) {
+                if (newValue === oldValue) return;
+                if (newValue === 236 || newValue === 39) {
+                    self.updateData();
                 }
-            };
+            });
 
-            $scope.showGoTo = false;
-            var isNotGrid = typeof $scope.field.context.isGrid === 'undefined';
-            if (goToFnExists && isNotGrid && hasRole)
-                $scope.showGoTo = true;
-
-            $scope.$watch('field.value.$', function () { self.updateValue() });
+            $scope.$watch('field.stateProvince.value.$', function () { self.updateValue() });
 
             $scope.$on("$destroy", function () {
                 self.unregOnChoicesChange();
             });
         }]);
 
-    module.directive('stdDropdownEdit',
-        ['$templateCache', 'stdDisplay', '$timeout', 'stdUtil',
-            function ($templateCache, display, $timeout, util) {
+    module.directive('stdIntlStateEdit',
+        ['$templateCache', 'stdDisplay',
+            function($templateCache, display) {
                 return {
                     restrict: 'E',
                     scope: {
                         field: '=',
                         label: '@'
                     },
-                    template: $templateCache.get('src/templates/edit/std-dropdown-edit.html'),
-                    controller: 'stdDropdownEditController',
-                    link: function (scope, element) {
+                    template: $templateCache.get('src/templates/edit/std-intl-state-edit.html'),
+                    controller: 'stdIntlStateEditController',
+                    link: function(scope, element, attrs) {
                         var oldValue;
                         var select = element[0].querySelectorAll('select')[0];
                         var button = element[0].querySelectorAll('button')[0];
 
                         angular.element(select).bind('focus', function (e) {
-                            oldValue = scope.field.value.$;
+                            oldValue = scope.field.stateProvince.value.$;
 
-                            //CHROME/SAFARI ONLY: Opens dropdown on focus 
-                            if (scope.field.context.isGrid) {
+                            //CHROME/SAFARI ONLY: Opens dropdown on focus
+                            if (scope.field.stateProvince.context.isGrid) {
                                 $timeout(function() {
                                     var event = document.createEvent('MouseEvents');
                                     event.initMouseEvent('mousedown', true, true, window, 0, 0, 0, 0, 0, false, false, false, false, 0, null);
@@ -167,19 +163,12 @@
 
                         angular.element(select).bind('keydown', function (e) {
                             if (e.keyCode === 27) {
-                                scope.field.value.$ = oldValue;
+                                scope.field.stateProvince.value.$ = oldValue;
                                 select.blur();
                             }
                             if (e.keyCode === 46) {
                                 scope.data.value === -1
-                                scope.field.value.$ = null;
-                            }
-                            if (e.ctrlKey && e.keyCode === 71) {
-                                e.preventDefault();
-                                scope.goTo();
-                                $timeout(function() {
-                                    select.focus();
-                                });
+                                scope.field.stateProvince.value.$ = null;
                             }
                         });
 
@@ -187,16 +176,9 @@
                             if(e.keyCode === 13){
                                 e.preventDefault();
                             }
-                            if (e.ctrlKey && e.keyCode === 71) {
-                                e.preventDefault();
-                                scope.goTo();
-                                $timeout(function() {
-                                    select.focus();
-                                });
-                            }
                         });
 
-                        display.setVisibility(element, scope.field.type.canDisplay);
+                        display.setVisibility(element, scope.field.stateProvince.type.canDisplay);
                     }
                 };
             }

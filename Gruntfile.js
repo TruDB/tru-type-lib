@@ -88,6 +88,13 @@ module.exports = function(grunt) {
                 dest: 'dist/',
                 flatten: false
             },
+            srcMinToDist: {
+                expand: true,
+                cwd: 'build/dist/',
+                src: 'tru-type-lib.min.js',
+                dest: 'dist/',
+                flatten: false
+            },
             srcToNuget: {
                 expand: true,
                 cwd: 'build/dist/',
@@ -157,7 +164,7 @@ module.exports = function(grunt) {
         'ngtemplates',
         'concat:js',
         'concat:css',
-        //'uglify',
+        'uglify',
         'clean:templates',
         'copy:cssToDemo',
         'copy:cssToDist',
@@ -165,6 +172,7 @@ module.exports = function(grunt) {
         //'gh-pages',
         'copy:srcToDemo',
         'copy:srcToDist',
+        'copy:srcMinToDist',
         'copy:srcToNuget',
         'copy:fontToNuget',
         'clean',

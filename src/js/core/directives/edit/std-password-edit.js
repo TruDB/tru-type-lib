@@ -113,7 +113,16 @@
             function ($scope, $element, $timeout, modal) {
                 var self = this;
 
+                self.cleanUp = function () {
+                    $scope.open = false;
+                    $scope.subview = null;
+                    $timeout(function () {
+                        $element[0].querySelectorAll('button')[0].focus();
+                    });
+                };
+
                 self.openModal = function () {
+                    $scope.subview = 'password';
                     var promise = modal.open(
                         'password',
                         {
@@ -123,18 +132,12 @@
                     promise.then(
                         function handleResolve(response) {
                             $scope.field.value.$ = response;
-                            self.focusedElement();
+                            self.cleanUp();
                         },
                         function handleReject(error) {
-                            self.focusedElement();
+                            self.cleanUp();
                         }
                     );
-                };
-
-                self.focusedElement = function () {
-                    $timeout(function () {
-                        $element[0].querySelectorAll('button')[0].focus();
-                    });
                 };
 
                 self.init = function () {
